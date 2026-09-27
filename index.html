@@ -1,0 +1,4002 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Omnimix Score Viewer</title>
+<style>
+/* ====== CSS====== */
+
+body{
+  font-family:sans-serif;
+  background:#0d0d0d;
+  color:#eee;
+  margin:12px;
+}
+
+.controls{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-bottom:12px;
+}
+
+input,select{
+  padding:6px;
+  background:#1a1a1a;
+  color:#fff;
+  border:1px solid #444;
+}
+
+.song{
+  background:#161616;
+  border:1px solid #333;
+  border-radius:6px;
+  padding:10px;
+  margin-bottom:14px;
+}
+
+.title{
+  font-size:16px;
+  font-weight:bold;
+  margin-bottom:6px;
+}
+
+table{
+  width:100%;
+  border-collapse:collapse;
+  table-layout:fixed;
+  font-size:13px;
+}
+
+th,td{
+  border:1px solid #444;
+  padding:6px;
+  text-align:center;
+}
+
+th{background:#202020;color:#aaa;}
+td{background:#111;}
+
+/* ▼ 8列対応：列幅 */
+th:nth-child(1){width:50px;}
+th:nth-child(2){width:100px;}
+th:nth-child(3){width:50px;}
+th:nth-child(4){width:90px;}
+th:nth-child(5){width:70px;}
+th:nth-child(6){width:70px;}
+th:nth-child(7){width:70px;}
+th:nth-child(8){width:90px;} /* ← ★ USED 列追加 */
+
+td:nth-child(4){
+  font-weight:bold;
+}
+
+/* ▼ スマホ調整 */
+@media (max-width: 600px) {
+  table {
+    table-layout: fixed;
+    width: 100%;
+  }
+  td, th {
+    padding: 4px;
+    text-align: center;
+  }
+
+  /* MISS 列 */
+  td:nth-child(7) {
+    width: 40px;
+  }
+
+  /* USED 列 */
+  td:nth-child(8) {
+    width: 60px;
+  }
+}
+
+/* ▼ DIFF 色 */
+.SPN{color:#4aa3ff;font-weight:bold;}
+.SPH{color:#ffd700;font-weight:bold;}
+.SPA{color:#ff4040;font-weight:bold;}
+.SPL{color:#b060ff;font-weight:bold;}
+
+/* ▼ LAMP 色 */
+.FAILED{color:#888;font-weight:bold;}
+.ASSISTED{color:#b060ff;font-weight:bold;}
+.EASY{color:#7CFC00;font-weight:bold;}
+.CLEAR{color:#00bfff;font-weight:bold;}
+.HARD{color:#ff4040;font-weight:bold;}
+.EXHARD{color:#ffd700;font-weight:bold;}
+
+.FULLCOMBO{
+  font-weight:bold;
+  background:linear-gradient(90deg,red,orange,yellow,green,cyan,blue,violet);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+}
+
+/* ▼ フィルタボタン */
+.diff-btn, .lamp-btn, .dj-btn, .lv-btn {
+  padding: 6px 10px;
+  border: 1px solid #444;
+  background: #1a1a1a;
+  color: #eee;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.diff-btn.active,
+.lamp-btn.active,
+.dj-btn.active,
+.lv-btn.active {
+  background: #444;
+}
+
+.csv-btn {
+  padding: 6px 10px;
+  border: 1px solid #4a4;
+  background: #1a2a1a;
+  color: #9f9;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.csv-btn:hover {
+  background: #234;
+}
+
+.csv-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#diffFilter, #lampFilter, #djFilter, #levelFilter {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+#stats{
+  margin-bottom:10px;
+  font-size:13px;
+  color:#ccc;
+}
+
+/* ▼ テーブル横スクロール対策 */
+.song table {
+  display: block;
+  overflow-x: auto;
+  white-space: nowrap;
+}
+
+.song td, .song th {
+  white-space: nowrap;
+}
+
+@media (max-width: 600px) {
+  .song table {
+    white-space: normal !important;
+    table-layout: auto !important;
+  }
+
+  td:nth-child(7) {
+    white-space: nowrap !important;
+    width: 32px !important;
+  }
+
+  td:nth-child(8) {
+    white-space: nowrap !important;
+    width: 60px !important;
+  }
+
+  .song table th,
+  .song table td {
+    width: auto !important;
+  }
+}
+
+@media (max-width: 600px) {
+  .song table th { font-size: 0 !important; }
+
+  .song table th:nth-child(1)::after { content: "DIFF"; }
+  .song table th:nth-child(2)::after { content: "LAMP"; }
+  .song table th:nth-child(3)::after { content: "RANK"; }
+  .song table th:nth-child(4)::after { content: "SCR"; }
+  .song table th:nth-child(5)::after { content: "P-GR"; }
+  .song table th:nth-child(6)::after { content: "GR"; }
+  .song table th:nth-child(7)::after { content: "MISS"; }
+  .song table th:nth-child(8)::after { content: "OPT"; }
+
+  .song table th::after {
+    font-size: 11px;
+    color: #aaa;
+  }
+}
+
+/* ▼ スマホ専用：ランプ短縮 */
+@media (max-width: 600px) {
+  td.FULLCOMBO,
+  td.EXHARD,
+  td.HARD,
+  td.CLEAR,
+  td.EASY,
+  td.ASSISTED,
+  td.FAILED {
+    font-size: 0 !important;
+  }
+
+  td.FULLCOMBO::after { content: "F-C"; font-size: 12px; }
+  td.EXHARD::after { content: "EX-H"; font-size: 12px; }
+  td.HARD::after { content: "HARD"; font-size: 12px; }
+  td.CLEAR::after { content: "CL"; font-size: 12px; }
+  td.EASY::after { content: "E-CL"; font-size: 12px; }
+  td.ASSISTED::after { content: "A-CL"; font-size: 12px; }
+  td.FAILED::after { content: "F"; font-size: 12px; }
+}
+
+/* ▼ USED OPTION バッジ */
+.used-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: center;
+}
+
+.used-option-badge {
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 10px;
+  background: #444;
+  color: white;
+  white-space: nowrap;
+}
+
+.used-option-badge.no-use {
+  background: #333;
+  color: #777;
+  font-style: italic;
+}
+
+.layout {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.filters {
+  flex: 0 0 auto;
+}
+
+.table-area {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+summary {
+  padding: 10px;
+  background: #1a1a1a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: bold;
+  list-style: none;
+}
+
+summary::-webkit-details-marker {
+  display: none;
+}
+
+#filterBox[open] summary {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+#filterBox > .filters {
+  padding: 10px 0;
+}
+
+#filterBox summary {
+  box-shadow: 0 2px 4px rgba(0,0,0,0.4);
+  margin-bottom: 8px;
+}
+
+summary .arrow::after {
+  content: "▼";
+  margin-left: 6px;
+  font-size: 0.9em;
+}
+
+details[open] summary .arrow::after {
+  content: "▲";
+}
+
+/* ===== サマリー（ANALYTICS） ===== */
+
+.summary-container {
+  margin-bottom: 14px;
+  border: 1px solid #333;
+  border-radius: 6px;
+  background: #161616;
+}
+
+.summary-header {
+  padding: 10px;
+  font-weight: bold;
+  background: #202020;
+  color: #ccc;
+  cursor: pointer;
+  user-select: none;
+}
+
+.summary-body {
+  padding: 10px;
+}
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.summary-table th,
+.summary-table td {
+  border: 1px solid #444;
+  padding: 6px;
+  text-align: center;
+  background: #111;
+}
+
+.summary-table th {
+  background: #202020;
+}
+
+@media (max-width: 600px) {
+  .summary-table th,
+  .summary-table td {
+    padding: 4px;
+    font-size: 12px;
+  }
+  .summary-table th:nth-child(1){width:30px;}
+  .summary-table th:nth-child(2){width:30px;}
+  .summary-table th:nth-child(3){width:30px;}
+  .summary-table th:nth-child(4){width:30px;}
+  .summary-table th:nth-child(5){width:30px;}
+  .summary-table th:nth-child(6){width:30px;}
+  .summary-table th:nth-child(7){width:30px;}
+  .summary-table th:nth-child(8){width:30px;}
+}
+
+.summary-FC {
+  color: #ff69b4;
+  font-weight: bold;
+}
+</style>
+</head>
+
+<body>
+
+<h2>Omnimix Score Viewer</h2>
+
+<div class="layout">
+
+<details id="filterBox" open>
+  <summary>FILTERS <span class="arrow"></span></summary>
+  <div class="filters">
+
+    <div class="controls">
+      <input type="file" id="jsonFile" accept=".json">
+      <input id="search" placeholder="曲検索">
+      <select id="versionFilter"></select>
+
+      <select id="dateFilter">
+        <option value="ALL">ALL DAYS</option>
+      </select>
+    </div>
+
+    <!-- ▼ 難易度フィルタ -->
+    <div id="diffFilter" class="controls">
+      <button data-diff="ALL" class="diff-btn active">ALL</button>
+      <button data-diff="SPN" class="diff-btn">SPN</button>
+      <button data-diff="SPH" class="diff-btn">SPH</button>
+      <button data-diff="SPA" class="diff-btn">SPA</button>
+      <button data-diff="SPL" class="diff-btn">SPL</button>
+    </div>
+
+    <!-- ▼ レベルフィルタ -->
+    <div id="levelFilter" class="controls">
+      <button data-lv="ALL" class="lv-btn active">ALL</button>
+      <button data-lv="1-8" class="lv-btn">☆1〜8</button>
+      <button data-lv="9" class="lv-btn">☆9</button>
+      <button data-lv="10" class="lv-btn">☆10</button>
+      <button data-lv="11" class="lv-btn">☆11</button>
+      <button data-lv="12" class="lv-btn">☆12</button>
+    </div>
+
+    <!-- ▼ ランプフィルタ -->
+    <div id="lampFilter" class="controls">
+      <button data-lamp="ALL" class="lamp-btn active">ALL</button>
+      <button data-lamp="FAILED" class="lamp-btn">FAILED</button>
+      <button data-lamp="ASSISTED" class="lamp-btn">ASSIST</button>
+      <button data-lamp="EASY" class="lamp-btn">EASY</button>
+      <button data-lamp="CLEAR" class="lamp-btn">CLEAR</button>
+      <button data-lamp="HARD" class="lamp-btn">HARD</button>
+      <button data-lamp="EXHARD" class="lamp-btn">EXHARD</button>
+      <button data-lamp="FULL COMBO" class="lamp-btn">FC</button>
+    </div>
+
+    <!-- ▼ DJ LEVEL フィルタ -->
+    <div id="djFilter" class="controls">
+      <button data-dj="ALL" class="dj-btn active">ALL</button>
+      <button data-dj="AAA" class="dj-btn">AAA</button>
+      <button data-dj="AA" class="dj-btn">AA</button>
+      <button data-dj="A" class="dj-btn">A</button>
+      <button data-dj="B" class="dj-btn">B</button>
+    </div>
+
+    <!-- ▼ CSVエクスポート -->
+    <div id="csvExport" class="controls">
+      <button id="exportLv12CsvBtn" class="csv-btn">☆12 CSV出力</button>
+    </div>
+
+  </div><!-- /filters -->
+</details>
+
+<!-- ▼ ここアナリティクスサマリー-->
+
+<div class="summary-container">
+  <div class="summary-header" id="summaryToggle">
+    ANALYTICS
+  </div>
+
+  <div class="summary-body" id="summaryBody">
+
+    <!-- ▼ TOTAL CLEAR LAMPS -->
+    <div class="summary-title">TOTAL CLEAR LAMPS</div>
+    <table class="summary-table">
+    <tr>
+    <th class="summary-FC">F-C</th>
+    <th class="EXHARD">EX-H</th>
+    <th class="HARD">HARD</th>
+    <th class="CLEAR">CL</th>
+    <th class="EASY">E-CL</th>
+    <th class="ASSISTED">A-CL</th>
+    <th class="FAILED">F</th>
+    </tr>
+
+      <tr>
+        <td id="sum-total-fc"></td>
+        <td id="sum-total-exh"></td>
+        <td id="sum-total-hard"></td>
+        <td id="sum-total-clear"></td>
+        <td id="sum-total-easy"></td>
+        <td id="sum-total-assist"></td>
+        <td id="sum-total-failed"></td>
+      </tr>
+    </table>
+
+    <!-- ▼ TOTAL DJ LEVELS -->
+    <div class="summary-title">TOTAL DJ LEVELS</div>
+    <table class="summary-table">
+      <tr>
+        <th>AAA</th><th>AA</th><th>A</th><th>B</th>
+        <th>C</th><th>D</th><th>E</th><th>F</th>
+      </tr>
+      <tr>
+        <td id="sum-total-aaa"></td>
+        <td id="sum-total-aa"></td>
+        <td id="sum-total-a"></td>
+        <td id="sum-total-b"></td>
+        <td id="sum-total-c"></td>
+        <td id="sum-total-d"></td>
+        <td id="sum-total-e"></td>
+        <td id="sum-total-f"></td>
+      </tr>
+    </table>
+
+<!-- ▼ TOTAL LEVEL CLEAR COUNT -->
+<div class="summary-title">TOTAL LEVEL CLEAR COUNT</div>
+ <table class="summary-table">
+   <tr>
+     <th>☆1〜7</th>
+     <th>☆8〜9</th>
+     <th>☆10</th>
+     <th>☆11</th>
+     <th>☆12</th>
+   </tr>
+   <tr>
+     <td id="sum-total-lv-1-7"></td>
+     <td id="sum-total-lv-8-9"></td>
+     <td id="sum-total-lv-10"></td>
+     <td id="sum-total-lv-11"></td>
+     <td id="sum-total-lv-12"></td>
+   </tr>
+ </table>
+    <!-- ▼ FILTERED CLEAR LAMPS -->
+    <div class="summary-title">FILTERED CLEAR LAMPS</div>
+    <table class="summary-table">
+    <tr>
+    <th class="summary-FC">F-C</th>
+    <th class="EXHARD">EX-H</th>
+    <th class="HARD">HARD</th>
+    <th class="CLEAR">CL</th>
+    <th class="EASY">E-CL</th>
+    <th class="ASSISTED">A-CL</th>
+    <th class="FAILED">F</th>
+    </tr>
+      <tr>
+        <td id="sum-cur-fc"></td>
+        <td id="sum-cur-exh"></td>
+        <td id="sum-cur-hard"></td>
+        <td id="sum-cur-clear"></td>
+        <td id="sum-cur-easy"></td>
+        <td id="sum-cur-assist"></td>
+        <td id="sum-cur-failed"></td>
+      </tr>
+    </table>
+
+    <!-- ▼ FILTERED DJ LEVELS -->
+    <div class="summary-title">FILTERED DJ LEVELS</div>
+    <table class="summary-table">
+      <tr>
+        <th>AAA</th><th>AA</th><th>A</th><th>B</th>
+        <th>C</th><th>D</th><th>E</th><th>F</th>
+      </tr>
+      <tr>
+        <td id="sum-cur-aaa"></td>
+        <td id="sum-cur-aa"></td>
+        <td id="sum-cur-a"></td>
+        <td id="sum-cur-b"></td>
+        <td id="sum-cur-c"></td>
+        <td id="sum-cur-d"></td>
+        <td id="sum-cur-e"></td>
+        <td id="sum-cur-f"></td>
+      </tr>
+    </table>
+
+<div class="summary-title">FILTERED LEVEL CLEAR COUNT</div>
+ <table class="summary-table">
+   <tr>
+     <th>☆1〜7</th>
+     <th>☆8〜9</th>
+     <th>☆10</th>
+     <th>☆11</th>
+     <th>☆12</th>
+   </tr>
+   <tr>
+     <td id="sum-cur-lv-1-7"></td>
+     <td id="sum-cur-lv-8-9"></td>
+     <td id="sum-cur-lv-10"></td>
+     <td id="sum-cur-lv-11"></td>
+     <td id="sum-cur-lv-12"></td>
+   </tr>
+ </table>
+ 
+ <!-- ▼ CLEAR RATE -->
+    <div class="summary-title">CLEAR RATE</div>
+    <table class="summary-table">
+      <tr><th>CLEAR RATE</th></tr>
+      <tr><td id="sum-clear-rate"></td></tr>
+    </table>
+
+  </div>
+</div>
+
+<div class="table-area">
+  <div id="list"></div>
+</div>
+
+</div><!-- /layout -->
+
+<script>
+/* ===== USED OPTION DEFINITIONS ===== */
+const USED_OPTION_DEFS = [
+  // ゲージ系
+  { bit: 35, pc: "ASSISTED EASY", sp: "A-EASY" },
+  { bit: 36, pc: "EASY",          sp: "EASY" },
+  { bit: 37, pc: "HARD",          sp: "HARD" },
+  { bit: 38, pc: "EX HARD",       sp: "EX-H" },
+
+  // 譜面変化系
+  { bit: 39, pc: "RANDOM",        sp: "RAN" },
+  { bit: 40, pc: "R-RANDOM",      sp: "R-RAN" },
+  { bit: 41, pc: "S-RANDOM",      sp: "S-RAN" },
+  { bit: 42, pc: "MIRROR",        sp: "MIR" },
+
+  // アシスト系
+  { bit: 43, pc: "AUTO SCRATCH",  sp: "A-SC" },
+  { bit: 50, pc: "LEGACY NOTE",   sp: "L-NOTE" },
+];
+
+/* ===== USED OPTION 抽出 ===== */
+function getUsedOptions(opt3, isMobile) {
+  const v = BigInt(opt3);
+  return USED_OPTION_DEFS
+    .filter(def => (v & (1n << BigInt(def.bit))) !== 0n)
+    .map(def => isMobile ? def.sp : def.pc);
+}
+
+/* ===== TSV ===== */
+const musicTSV=`
+1000	5.1.1.	-	2	6	10	-
+1001	GRADIUSIC CYBER	-	5	6	7	-
+1002	Prince on a star	-	4	5	6	-
+1003	R3	-	4	5	6	-
+1004	Macho Gang	-	2	7	10	-
+1005	THE EARTH LIGHT	-	4	7	8	10
+1006	GAMBOL	-	2	2	12	-
+1007	gentle stress	-	2	4	9	-
+1008	GENOM SCREAMS	-	3	6	9	-
+1009	22DUNK	-	3	4	5	-
+1010	Dr.LOVE	-	2	3	4	-
+1011	LUV TO ME(disco mix)	-	5	6	7	-
+1012	Melt in my arms	-	3	4	4	-
+1013	BRILLIANT 2U	-	3	4	4	-
+1015	deep in you	-	4	4	5	-
+1016	Special energy	-	2	3	5	-
+1017	RUGGED ASH	-	3	3	9	11
+1018	diving money	-	2	2	3	-
+1019	KEEP ON MOVIN'	-	2	3	-	-
+1020	PARANOIA MAX～DIRTY MIX～	-	5	6	8	-
+1201	Be in my paradise	-	1	2	-	-
+1202	been so long	-	-	3	-	-
+1203	Beginning of life	-	-	2	3	-
+1204	celebrate	-	4	6	8	-
+1205	Deep Clear Eyes	-	-	4	5	-
+1206	Do you love me?	-	-	2	-	-
+1207	e-motion	-	-	2	3	-
+1208	g.m.d.	-	2	2	3	-
+1209	into the world	-	-	3	-	-
+1210	jam jam reggae	-	-	1	3	-
+1211	LOVE SO GROOVY	-	-	4	-	-
+1212	OVERDOSER	-	2	3	3	-
+1213	patsenner	-	4	5	-	-
+1214	perfect free	-	3	4	5	-
+1215	Queen's Jamaica (astria mix)	-	-	4	-	-
+1216	Salamander Beat Crush mix	-	2	3	3	-
+1217	Ska a go go	-	-	8	9	-
+1218	The Rhyme Brokers	-	-	5	7	-
+1219	The Theme from "Flo-jack"	-	-	1	-	-
+1220	YOU MAKE ME	-	-	2	-	-
+1401	NaHaNaHa vs. Gattchoon Battle	-	-	3	-	-
+1402	ちょっときいてな(ZANSHIN-NA MIX)	-	-	4	-	-
+1500	20,November(AC 1st)	-	-	4	5	-
+2000	.59	-	4	6	7	-
+2001	Bad boy	-	2	3	-	-
+2002	Dancin' Into The Night	-	2	3	-	-
+2003	Digital MinD(A/T Libra mix)	-	4	5	6	-
+2004	dong-tepo no.1	-	5	8	-	-
+2005	Electro Tuned(the SubS mix)	-	4	5	6	-
+2006	I Was The One	-	3	3	4	-
+2007	I'm In Love Again	-	4	5	-	-
+2008	Indigo Vision(full flavour hide around mix)	-	3	5	8	-
+2009	SOFT LANDING ON THE BODY	-	4	6	-	-
+2010	Headache	-	2	4	-	-
+2011	Hitch Hiker	-	3	4	5	-
+2012	SP-TRIP MACHINE(for beatmania II)	-	3	4	4	-
+2013	Second Style(Hip Hop Paradise)	-	4	5	-	-
+2014	Shine On	-	3	5	6	-
+2016	PUT YOUR FAITH IN ME(for beatmania II)	-	3	6	-	-
+2201	Brazilian Rhyme	-	4	5	-	-
+2202	Get on Beat	-	-	3	4	-
+2203	Junglist King	-	-	3	-	-
+2204	Junglist King (long)	-	-	3	-	-
+2205	LET THE BEAT HIT EM! BASS MIX	-	-	2	-	-
+2206	lovin' you	-	3	4	-	-
+2207	Mirrorball Satellite 2012	-	-	3	4	-
+2208	morning prayer	-	-	1	3	-
+2209	Panorama	-	2	3	-	-
+2210	S.O.S.	-	4	7	-	-
+2211	Shake	-	-	2	3	-
+2212	踊る！福神漬(CALCUTTA)	-	4	5	7	-
+2405	Electro Tuned(the SubS mix) (Old BGA)	-	4	5	6	-
+3000	CAN'T STOP FALLIN'IN LOVE	-	4	8	-	-
+3001	Don't Stop!	-	4	4	4	-
+3002	DYNAMITE RAVE	-	4	6	7	-
+3003	END OF THE CENTURY	-	5	6	7	-
+3004	era (nostalmix)	-	5	8	9	-
+3005	Holic	-	5	7	11	-
+3006	LEADING CYBER	-	4	6	7	-
+3007	Presto	-	3	8	8	-
+3008	R5	-	5	8	11	-
+3009	REINCARNATION	-	4	5	7	-
+3010	Schlagwerk	-	4	6	8	-
+3011	Skyscraper	-	4	6	7	-
+3012	Tangerine Stream	-	2	3	-	-
+3013	THE SAFARI	2	7	10	-	-
+3014	Cold Pulse	-	4	5	5	-
+3015	Get me in your sight	-	3	5	-	-
+3016	IS THIS LOVE?	-	3	4	5	-
+3017	Sense	-	4	6	6	-
+3018	never let you down	-	4	5	5	-
+3201	Almost Love	-	-	4	-	-
+3202	Artificial Impatience	-	3	4	5	-
+3203	Beat Machine	-	4	5	-	-
+3204	DREAM	-	3	4	6	-
+3205	five fathoms (beatmania II special version)	-	1	3	-	-
+3206	Garden of Love	-	2	3	-	-
+3207	L.O.T.(Love Or Truth)	-	2	3	-	-
+3208	Let's talk it over	-	3	5	6	-
+3209	Make Your Move	-	3	4	6	-
+3210	Right Now	-	3	4	4	-
+3211	S.O.S.(THE TIGER TOOK MY FAMILY)	-	5	8	-	-
+3212	SKIN	-	-	3	-	-
+3213	TAKE ON ME	-	5	6	6	-
+3214	THE SAFARI(Old Version)	-	6	9	-	-
+4000	250bpm	-	5	8	10	-
+4001	ABSOLUTE	-	6	8	10	11
+4002	B4U	-	5	9	10	-
+4003	Broken My Heart	-	5	7	9	-
+4004	CHECKING YOU OUT	-	7	9	11	-
+4005	Clione	-	4	5	9	11
+4006	DXY!	-	6	9	10	-
+4007	empathy	-	5	7	8	-
+4008	era (step mix)	-	5	8	9	-
+4009	FANTASY	-	5	8	9	-
+4010	Final Count Down(MTO CRY BABY STYLE)	-	5	8	9	-
+4011	GET ON BEAT(WILD STYLE)	-	6	9	10	-
+4012	HIGHER	-	3	4	6	-
+4013	JIVE INTO THE NIGHT	2	5	8	10	-
+4014	KAMIKAZE	-	5	6	10	-
+4015	LOVE WILL・・・	-	4	4	7	-
+4016	minimalian	-	3	8	9	-
+4017	Mr.T.(take me higher)	-	4	5	10	-
+4018	NORTH	-	4	5	-	-
+4019	Nothing Ain't Stoppin' Us	-	2	3	-	-
+4020	starmine	2	5	8	9	10
+4021	Voltage (feat. Hidemaru)	-	5	7	8	-
+4022	Vienna	-	3	5	-	-
+4023	Hitch Hiker2	-	4	6	7	9
+4024	I'M FOR REAL	-	3	4	4	-
+4025	SWEET LAB	-	3	6	10	-
+4026	DIAMOND JEALOUSY	-	5	6	-	-
+4027	ULTRA HIGH-HEELS	-	4	5	5	-
+4028	LUV TO ME(UCCHIE'S EDITION)	-	5	6	11	-
+4029	Burnin' The Floor	-	4	4	7	-
+4030	Nasty!	-	3	4	9	-
+4031	Under Construction	-	5	7	8	-
+4032	FLOWERS for ALBION	-	2	5	-	-
+4033	Jam&Marmalade	-	6	7	8	-
+4202	CONGA	-	4	6	7	-
+4203	GIRIGIRI DADDY	-	3	5	7	-
+4204	INFINITE PRAYER	-	4	5	8	-
+4205	NEW YORK CITY BOY	-	4	5	-	-
+4206	R壱萬	-	5	6	9	-
+4207	Rest my mind	-	3	4	-	-
+4208	sanctus	-	3	5	-	-
+4209	Small Waves	-	4	5	6	-
+4210	Twin Bee(Generation X)	-	4	5	7	-
+4211	サナ・モレッテ・ネ・エンテ	-	3	5	5	-
+4212	ErAseRmoToR maXimUM	-	5	7	-	-
+4214	INFINITE PRAYER -floating flock style-	-	3	4	5	-
+4215	Trancemission	-	3	5	-	-
+4216	サナ・モレッテ・ネ・エンテ(B.L.T.STYLE)	-	3	4	-	-
+4217	SWEET LAB(Old Version)	-	3	5	6	-
+4218	GET ON BEAT(WILD STYLE)(Old Version)	-	5	8	9	-
+5000	Abyss	-	5	7	8	-
+5001	Come With Me	-	4	5	6	-
+5002	Deadline	-	3	5	7	-
+5003	Give Me A Sign	-	4	6	8	-
+5004	in my eyes	-	5	6	7	-
+5005	Kiss me all night long	-	5	6	7	-
+5006	Mobo☆Moga	-	5	6	7	-
+5007	outer wall	-	5	6	8	11
+5008	OVER THE CLOUDS	-	3	5	7	-
+5009	QQQ	-	5	8	10	-
+5010	Radical Faith	-	5	6	7	-
+5011	Real	-	5	8	9	-
+5012	Regulus	-	6	9	10	-
+5013	Remember You	-	2	4	-	-
+5014	RIDE ON THE LIGHT (HI GREAT MIX)	-	4	5	8	10
+5015	RISLIM	-	4	7	-	-
+5016	Spin the disc	-	5	7	8	-
+5017	STILL IN MY HEART	-	5	7	9	-
+5018	still my words	-	4	6	-	-
+5019	sync	-	6	8	10	-
+5020	tablets	-	4	6	8	-
+5021	V	2	5	10	12	-
+5022	IIDX	-	3	4	7	-
+5023	sometime	-	4	6	8	-
+5024	THE CUBE	-	4	6	7	-
+5025	LOVE AGAIN TONIGHT～for Mellisa mix～	-	4	5	6	-
+5026	VIRTUAL MIND	-	3	7	10	-
+5027	Time is money	-	3	3	-	-
+5029	INSERTiON	-	5	7	8	-
+5030	THE SHINING POLARIS	-	5	7	8	-
+5201	1989	3	4	6	-	-
+5202	Estella	3	4	6	-	-
+5203	Flash of Love	2	4	5	6	-
+5204	THE BIG VOYAGER	-	5	9	8	-
+5205	天国のキッス ～D.J.TAKA'S STYLE～	3	3	5	7	-
+5206	c-r-a-c-k-ER	-	3	5	7	-
+5207	DENGUE	-	3	4	5	-
+5208	DUNE	-	4	5	6	-
+5209	PRAT FALL	-	4	5	6	-
+6000	20,November	-	4	8	8	-
+6001	BALLAD FOR YOU～想いの雨～	-	4	5	7	-
+6002	Beautiful Days	-	4	5	7	-
+6003	Blueberry Stream	-	5	7	8	-
+6004	Buffalo	-	5	7	10	11
+6005	Colors (radio edit)	3	6	9	12	-
+6006	Comment te dire adieu	-	4	5	7	-
+6007	DIVE ～INTO YOUR HEART～	-	5	8	10	-
+6009	Fly Away(Instrumental)	1	4	6	8	-
+6010	fly through the night	-	4	7	8	-
+6011	Free Style	-	5	6	7	-
+6012	Frozen Ray (original mix)	-	6	9	9	-
+6013	G2	-	8	9	11	12
+6014	L'amour et la liberté	-	5	8	10	-
+6015	Linus	-	5	9	11	-
+6016	NEMESIS	-	5	9	11	-
+6017	ROMEO&JULIET	-	4	6	10	-
+6018	rottel-da-sun	-	5	8	10	-
+6019	route 80s	-	6	8	9	-
+6020	Silhoette of my mind	-	4	6	-	-
+6021	Summer Vacation(CU mix)	-	6	9	-	-
+6022	Take It Easy	-	7	10	11	-
+6023	VJ ARMY	-	6	9	10	-
+6024	Wow Wow 70's	-	4	5	6	-
+6025	Y31	-	6	8	9	-
+6026	YESTERDAY	1	4	6	8	-
+6027	こっちを向いてよ	-	5	6	7	-
+6028	電人イェーガーのテーマ(Theme of DENJIN J)	-	5	7	7	-
+6029	19,November	-	5	6	8	-
+6030	Five Regrets	-	3	7	-	-
+6031	SOMETHING WONDERFUL	-	6	8	10	-
+6201	A New Morning	1	4	5	7	-
+6202	Doigts de Fatima -ファティマの掌-	1	2	3	4	-
+6203	Flowtation(Original Mix)	3	5	7	8	-
+6204	JUST DO IT	2	4	6	7	-
+6205	LOVE IS DREAMINESS	2	5	6	-	-
+6206	M-02stp.ver.1.01	2	4	6	8	-
+6207	NIGHT OF FIRE	3	4	7	10	-
+6208	PARAPARA PARADISE	3	5	9	9	-
+6209	REAL LOVE	2	5	6	8	-
+6211	Changes	-	2	4	-	-
+6212	VJ ARMY(Old Version)	-	6	7	8	-
+6213	SOMETHING WONDERFUL(Old Version)	2	6	8	8	-
+7000	2002	-	4	5	7	-
+7001	9 o'clocks	-	4	7	8	-
+7002	A	-	6	10	12	-
+7003	AVE DE RAPINA	-	6	8	9	-
+7004	Bad Routine	-	5	7	9	-
+7005	BRING HER DOWN	-	5	7	9	-
+7006	Burning Heat! (Full Option Mix)	-	4	5	7	10
+7007	BURNING UP FOR YOU	-	2	4	6	-
+7008	Cheer Train	-	5	6	9	-
+7009	CLOUDY MUSIC	-	5	7	-	-
+7010	D2R	-	5	6	8	-
+7011	DESTINY	-	5	6	8	-
+7012	E.V CAFE	-	4	5	7	-
+7013	entrance	-	5	8	9	-
+7014	foreplay	-	4	8	8	-
+7015	General Relativity	-	3	6	7	-
+7016	Glorious Days	-	3	5	6	-
+7017	Gravity	-	5	7	-	-
+7018	Happy Wedding	-	6	7	8	-
+7019	HEARTBEAT	-	5	9	10	-
+7020	i feel ...	-	4	5	7	-
+7021	Last Message	-	5	8	9	-
+7022	Let the Snow Paint Me	-	4	6	7	-
+7023	LOVE GENERATION	-	5	8	10	-
+7024	Love Me Do	-	5	7	9	-
+7025	Marmalade Reverie	-	4	5	7	-
+7026	MAX 300	-	7	10	12	-
+7027	New York	-	3	4	7	-
+7028	REMEMBER ME	2	5	8	-	-
+7029	Secret Tale	-	3	5	7	-
+7030	SOLID GOLD	-	5	6	7	-
+7031	Somebody Like You	-	4	7	9	-
+7032	Spica	-	4	9	11	-
+7033	Spooky	-	5	6	8	-
+7034	stoic	-	8	10	11	-
+7035	The Beauty Of Silence	2	5	6	7	-
+7036	Tomorrow Perfume	-	6	9	9	-
+7037	traces	-	6	9	10	-
+7038	ZERO-ONE	-	5	9	10	11
+7039	革命	-	6	10	10	-
+7201	more deep[ver.2.1]	3	3	5	6	-
+7202	Never Look Back	3	5	8	-	-
+7203	The Sound Of Goodbye	2	4	8	10	-
+7204	Somebody Like You(Old Version)	-	5	7	7	-
+7205	MAX 300(Old Version)	-	8	10	-	-
+8000	abstract	-	6	9	9	-
+8001	airflow	-	3	5	7	-
+8002	ALIEN WORLD	-	5	6	7	-
+8003	ALL RIGHT	-	4	8	9	-
+8004	Attitude	-	5	8	9	-
+8005	bit mania	-	4	5	8	-
+8006	Blame	-	6	7	11	-
+8007	Blown My Heart Away	-	4	5	7	-
+8008	CELEBRATE NITE	-	5	6	8	10
+8009	Colors -Y&Co. Eurobeat Remix-	-	5	9	10	-
+8010	DANCER	-	4	5	7	-
+8011	dissolve	-	5	7	8	-
+8012	Drivin'	-	4	7	10	-
+8013	dual control	-	5	7	9	-
+8014	FLUTE MAN	-	4	7	8	-
+8015	Foundation of our love	1	2	6	7	-
+8016	FUNKY BINGO PARADISE	-	5	6	8	-
+8017	Giudecca	-	4	9	11	-
+8018	Halfway of promise	-	4	8	11	-
+8019	Hormiga obrera	-	5	7	8	-
+8020	HYPER BOUNDARY GATE	-	6	8	9	-
+8021	I.C.F.5800	-	4	7	8	-
+8022	jelly kiss	-	4	5	8	-
+8023	LAB	-	5	9	10	11
+8024	LOVE IS ORANGE	-	4	6	8	10
+8025	Luv 2 Feel Your Body	-	4	6	9	-
+8026	memories	-	5	9	9	-
+8027	Monkey Dance	-	4	7	9	-
+8028	murmur twins	3	5	9	11	-
+8029	MUSIC TO YOUR HEAD	-	4	7	9	-
+8030	OUTER LIMITS(CS DD Version) 	-	5	8	-	-
+8031	PLEASE DON'T GO	-	5	7	12	-
+8032	rainbow flyer	-	5	9	11	-
+8033	Red Nikita	-	4	8	9	-
+8034	Small clone	-	3	6	8	-
+8035	Smoke	-	4	8	10	-
+8036	SPEED TRANCE MACH 3	-	3	7	8	-
+8037	STAR DREAM	-	5	7	9	-
+8038	Stick Around	-	2	3	4	-
+8039	symbolic	-	6	9	10	-
+8040	thunder	-	6	8	9	-
+8041	TRIBAL MASTER	-	4	6	9	-
+8042	V35	-	4	6	8	-
+8043	WAR GAME	-	4	8	10	-
+8044	World Wide Love	-	3	5	5	-
+8045	xenon	-	5	9	11	-
+8046	夜のサングラス	-	5	6	8	-
+8047	合体せよ！ストロングイェーガー！！	-	6	7	10	-
+8048	桜	-	7	10	12	-
+8049	蒼い衝動	-	5	7	8	-
+8130	OUTER LIMITS	-	3	6	-	-
+8201	LOVE BOX	-	2	5	7	-
+8202	STEP INTO THE NEW WORLD	-	6	9	10	-
+8203	suggestion	-	3	6	8	-
+8204	エブリデイ・ラブリデイ -L.E.D.STYLE MIX-	-	5	7	8	-
+9000	lower world	-	6	9	10	-
+9001	Silvia Drive	-	4	8	9	10
+9002	lights	-	3	6	8	-
+9003	fun	-	4	7	10	-
+9004	Be Rock U (1998 burst style)	-	4	7	9	-
+9005	Prelude	-	5	6	10	-
+9006	MARIA (I believe... )	-	4	8	9	-
+9007	BREEDING	-	4	6	7	-
+9008	ADVANCE	-	4	6	10	-
+9009	LOVE IS DROWING	-	3	7	8	-
+9010	Cradle	-	5	8	10	-
+9011	Make A Difference	-	5	9	10	-
+9012	moon_child	-	5	10	12	-
+9013	The end of my spiritually	-	4	6	7	-
+9014	昭和企業戦士荒山課長	-	3	6	7	-
+9015	ライオン好き	-	4	5	7	-
+9016	真夏の花・真夏の夢	-	4	6	9	-
+9017	The Biggest Roaster	-	3	6	7	-
+9018	Golden Horn	-	4	8	9	-
+9019	Your Body	-	5	6	9	-
+9020	Honey	-	4	5	-	-
+9021	ECHOES	-	4	5	8	-
+9022	Logic Board	-	5	8	11	-
+9023	Two DAYS OF LOVE	-	5	7	8	-
+9024	Dreamin' Sun	-	5	7	8	-
+9025	I can fly,I've got reason	-	3	7	9	-
+9026	Karma	-	6	9	10	-
+9027	BAD BOY BASS!! (dj Remo-con MIX)	-	5	7	8	-
+9028	quasar	-	6	9	11	-
+9029	ACT	-	6	9	9	-
+9030	SNOW	-	5	7	10	-
+9031	SWITCH	-	4	6	10	-
+9032	POWER DREAM	-	4	8	10	-
+9033	SWEETEST SAVAGE	-	4	7	11	-
+9034	STAR FIELD	2	4	8	9	-
+9035	WANNA TELL THAT WORD	-	5	8	9	-
+9036	ATOMIC AGE	-	2	5	9	-
+9037	rottel-the-Mercury	-	6	9	10	-
+9038	one or eight	-	7	10	12	-
+9039	Really Love	-	4	6	10	-
+9040	Let's say Hello!	2	3	6	7	-
+9041	CHARLOTTE	-	3	4	7	-
+9042	LOVE♡SHINE	3	5	9	10	-
+9043	PARANOIA survivor MAX	-	5	8	10	-
+9044	HYPER EUROBEAT (2DX style)	-	5	8	10	-
+9045	Sweet Sweet♡Magic	-	5	8	10	-
+9046	bag	-	5	6	10	-
+9047	FESTA DO SOL	-	3	6	8	-
+9048	e-motion 2003  -romantic extra-	-	6	8	10	-
+9049	u gotta groove -extend joy style-	-	3	6	8	-
+9050	traces -tracing you mix-	-	4	6	-	-
+9051	Abyss -The Heavens Remix-	3	7	10	10	11
+9052	Distress	-	7	10	-	-
+9053	I'm In Love Again -Y&Co. EURO MIX-	-	3	6	9	-
+9054	Let The Snow Paint Me -Y&Co. Remix-	-	5	6	10	-
+9055	I Was The One (80's EUROBEAT STYLE)	-	4	6	7	-
+9056	OVER THE CLOUDS -Flying Grind mix-	-	4	5	-	-
+9057	RISLIM -Remix-	-	4	6	11	-
+9058	BRIGHTNESS DARKNESS	-	4	8	9	-
+9059	Quickening	-	5	9	10	-
+9201	5PM ETERNAL	-	5	9	10	-
+9202	80's CAPSULE	-	3	5	9	-
+9204	paramnesia	-	4	6	9	-
+9301	SWEETEST SAVAGE(Old Version)	-	4	7	8	-
+9302	Be Rock U (1998 burst style)(Jun Vocal)	-	4	7	9	-
+9306	PARANOIA survivor MAX(Old Version)	-	5	8	9	-
+9401	Celebration	-	3	4	-	-
+9402	First Day	1	2	3	-	-
+9403	Funkytown	1	2	3	-	-
+9404	Lift Me Up	1	3	4	-	-
+9405	The Way You Move	1	2	3	-	-
+9406	Virtual Insanity	1	2	3	-	-
+9407	ATOMIC AGE(Old Version)	-	2	8	9	-
+9408	ADVANCE(Old Version)	-	4	6	7	-
+10001	pandora	-	5	8	9	-
+10002	BABY LOVE	-	6	7	10	-
+10003	JAM	-	5	7	9	-
+10004	No.13	-	8	10	11	-
+10005	desolation	-	2	4	5	-
+10006	EXE	-	4	8	10	-
+10007	どんなときも。	1	3	6	9	-
+10008	PLATONIC-XXX	-	4	6	8	-
+10009	SHOOTING STAR	-	7	8	9	-
+10010	CARRY ON NIGHT (English version)	-	5	7	9	-
+10011	一途な恋 (HYPER J-EURO MIX)	2	4	6	8	-
+10012	Ready To Rockit Blues	-	3	6	9	-
+10013	Boundary	-	4	9	9	-
+10014	LIMITED	-	3	9	9	-
+10015	CHOO CHOO TRAIN(dnb mix)	2	3	8	9	-
+10016	Lucy	-	4	9	11	-
+10017	システムロマンス	-	4	7	8	-
+10018	SPACE FIGHT	-	3	8	11	-
+10019	Back Into The Light	-	6	7	10	-
+10020	Rise'n Beauty	-	6	9	10	-
+10021	scherzo	-	3	8	9	-
+10022	雪月花	-	6	10	12	-
+10023	Narcissus At Oasis	-	4	10	10	-
+10024	rainbow rainbow	-	7	10	11	-
+10025	Love Is Eternity	-	6	9	11	-
+10026	Think of me	-	2	5	7	-
+10027	Drop on the floor	-	4	7	8	-
+10028	Innocent Walls	-	8	12	12	-
+10029	Changes	-	6	9	-	-
+10030	Smell Like This	-	5	7	8	-
+10031	SCORE	-	5	8	10	-
+10032	Shakin'31	-	5	7	8	-
+10033	Daisuke	2	6	8	10	-
+10034	HIGH	-	5	9	9	11
+10035	LOW	-	4	8	9	-
+10036	FEEL IT	-	5	9	10	-
+10037	HI SCHOOL DREAM	-	5	7	10	-
+10038	ALIEN TEMPLE	-	5	7	8	-
+10039	NO DOUBT GET LOUD	-	2	6	8	-
+10040	1st Samurai	-	5	10	11	-
+10041	Debtty Daddy	-	5	9	11	-
+10042	Feedback	-	5	8	10	-
+10043	Let's run	-	3	5	7	-
+10044	Don't forget	-	4	5	7	-
+10045	COSMIC RAISE	-	3	6	10	-
+10046	Freezing atmosphere	-	4	6	9	-
+10047	ASTRAL VOYAGE	-	5	6	9	-
+10048	DoLL	2	5	6	7	-
+10049	One More Lovely	-	5	9	12	-
+10050	R2	-	5	7	9	-
+10051	5.8.8.	1	2	4	5	-
+10052	GHOST REVIVAL	-	5	9	10	-
+10053	GRADIUS -FULL SPEED-	-	4	8	10	-
+10054	A-JAX(3-WAY MIX)	-	4	8	10	-
+10201	ACID VISION	-	6	8	9	-
+10204	jelly kiss -Midihead's Smack Mix-	-	4	7	10	-
+10205	Strong Woman feat.DABO	-	4	6	9	-
+11001	BLOCKS	-	5	7	11	-
+11002	BREATH	-	6	7	10	-
+11003	TEXTURE	-	3	5	6	-
+11004	Don't be afraid myself	-	5	9	10	-
+11005	SPEEDY CAT	-	5	8	9	-
+11006	CAR OF YOUR DREAMS	-	5	6	7	-
+11007	太陽～T・A・I・Y・O～	-	4	8	9	-
+11008	KEY	-	6	8	11	-
+11009	awakening	-	5	7	10	-
+11010	Sphere	-	5	9	10	-
+11011	ＵＬＴｉＭΛＴＥ	-	5	7	9	-
+11012	spiral galaxy	-	5	9	11	12
+11013	ANDROMEDA	3	5	8	11	-
+11014	RESONATE 1794	-	5	10	11	-
+11015	earth scape	-	2	5	7	-
+11016	Les filles balancent	-	5	6	7	-
+11017	Move Me	-	4	6	8	-
+11018	Close my Eyes for Me	-	5	8	9	-
+11019	大桟橋	-	3	6	9	-
+11020	ON THE TUBE	2	5	8	9	-
+11021	believe...?	-	4	6	8	-
+11022	KING OF GROOVE	-	4	7	9	-
+11023	EVO66	-	4	7	9	-
+11024	ROK DA WORLD	-	4	6	8	-
+11025	Wonder Bullfighter	-	5	7	11	-
+11026	ピアノ協奏曲第１番”蠍火”	-	5	11	12	-
+11027	INJECTION OF LOVE	-	4	6	9	-
+11028	The Hope of Tomorrow	2	5	8	10	10
+11029	Back to the Dance Floor	-	4	5	9	-
+11030	FAKE TIME	-	5	11	12	-
+11031	Click Again	-	5	6	11	-
+11032	RED ZONE	1	5	9	11	12
+11033	Fly Away To India	-	3	6	7	-
+11034	Secret of Love	-	5	7	11	-
+11035	Be quiet	-	5	9	11	12
+11036	AGEHA	3	5	8	9	11
+11037	gigadelic	3	9	12	12	-
+11038	HORIZON	-	5	7	8	-
+11039	Kecak	2	5	7	11	-
+11040	AA	-	5	10	12	-
+11041	惑	-	3	5	7	-
+11042	listen to yourself	-	5	7	10	-
+11043	D.A.N.C.E.!	-	3	5	10	-
+11044	NIGHT FLIGHT TO TOKYO	-	5	8	9	-
+11045	HARMONY	2	4	6	7	-
+11046	PERFECTWORLD	-	2	5	7	-
+11047	KI・SE・KI(IIDX RED EDIT)	1	4	7	8	-
+11048	Tell Me More…	-	3	5	8	-
+11049	More Move	-	5	7	8	-
+11050	NEBULA GRASPER	-	6	9	10	-
+11051	Raspberry&#9825;Heart(English version)	-	5	8	9	-
+11052	GENOCIDE	-	6	10	11	-
+11201	Go Berzerk	-	5	10	11	-
+11202	Toxic	-	2	3	7	-
+11203	You Really Got Me	-	1	2	7	-
+12000	double thrash	-	6	10	10	-
+12001	キャッシュレスは愛情消すティッシュ	-	4	8	10	-
+12002	Little Little Princess	-	5	10	11	12
+12003	ヒマワリ	-	3	9	10	-
+12004	冥	3	5	10	12	-
+12005	MOON RACE	-	5	7	9	-
+12006	LESSON 5	-	5	8	9	-
+12007	rage against usual	-	7	10	12	-
+12008	INAZUMA	-	5	9	11	12
+12009	HAPPY☆ANGEL	3	5	7	10	-
+12010	EDEN	-	6	9	10	11
+12011	CaptivAte～浄化～	-	5	9	11	12
+12012	Catch Me	2	5	8	10	-
+12013	月光	-	5	8	10	-
+12014	Under the Sky	-	5	7	9	-
+12015	Xepher	3	5	10	11	-
+12016	Twelfth Style	-	6	7	10	12
+12018	I am	-	5	8	10	-
+12019	合体せよ！ストロングイェーガー！！ (Ryu☆ remix)	-	5	8	11	-
+12020	garden	-	4	7	10	12
+12021	Agnus Dei	-	5	9	10	-
+12022	Tizona d'El Cid	-	5	9	10	-
+12023	EMPTY OF THE SKY	-	3	5	8	-
+12024	tant pis pour toi	-	5	8	10	-
+12025	100% minimoo-G	-	5	10	11	-
+12026	PLASMA	-	4	8	9	-
+12027	in motion	-	5	6	7	-
+12028	SigSig	3	5	7	10	-
+12029	ラクエン	-	4	6	11	-
+12030	POODLE	-	5	8	10	11
+12031	Pollinosis	-	4	6	11	-
+12032	SEXYSEXYCHEVY	-	5	6	8	-
+12033	FUNKTION	-	5	7	9	-
+12034	Get'em up to R.A.V.E	-	5	8	10	-
+12035	Listen up	-	4	7	9	-
+12036	alla turca con passione	-	5	8	10	-
+12037	オレはビートマニア！お前は何マニア？	-	7	8	10	-
+12038	We are Disっ娘よっつ打ち命	-	3	5	9	-
+12039	Don't let it go	-	4	8	9	-
+12040	vault of heaven	-	4	8	10	-
+12041	Love Magic	-	5	8	10	-
+12042	SPARK !	-	4	7	9	-
+12043	First Resolution	-	5	7	9	-
+12044	GREEN EYES	-	6	8	10	-
+12045	SCREAM SQUAD	-	7	10	12	-
+12046	mind the gap	-	5	7	9	-
+12047	TOE JAM	-	4	8	8	-
+12048	PATRIOTISM	-	4	7	9	-
+12049	Aurora	-	7	10	11	-
+12050	Votum stellarum	-	4	9	10	-
+12051	Pink Rose	-	3	5	8	10
+12052	Scripted Connection⇒ N mix	-	6	8	10	11
+12053	Scripted Connection⇒ H mix	-	7	10	11	12
+12054	Scripted Connection⇒ A mix	-	7	10	12	12
+12202	Endless Summer Story	-	2	6	8	-
+12203	IceCube Pf.(RX-Ver.S.P.L.)	-	2	5	7	-
+12205	風の谷のDREAM	-	4	7	9	-
+13000	華蝶風雪	-	6	10	11	12
+13001	タシカナモノ	-	5	7	9	-
+13002	The Dirty of Loudness	-	7	10	11	-
+13003	D.C.fish	-	5	9	11	-
+13004	SAMBA DE JANEIRO	2	5	9	10	-
+13005	嘆きの樹	-	8	11	12	-
+13006	Melody Life	2	4	6	9	-
+13007	SPRING RAIN (LLUVIA DE PRIMAVERA)	1	4	7	8	-
+13008	wish	-	4	6	7	-
+13009	Bloody Tears(IIDX EDITION)	-	5	9	10	-
+13010	CONTRACT	-	9	10	11	12
+13011	INFERNO	-	5	7	9	-
+13012	DEEP ROAR	-	5	7	11	-
+13013	Leaving...	2	4	8	10	-
+13014	ALFARSHEAR 双神威に廻る夢	2	5	7	10	-
+13015	Why did you go away -GIRL'S SIGHT-	3	5	8	10	-
+13016	BREAK OUT	1	4	7	9	-
+13017	Apocalypse ～dirge of swans～	1	5	9	10	-
+13018	iFUTURELIST	-	4	6	8	-
+13019	Heavenly Sun (IIDX VERSION)	-	4	7	10	11
+13020	Look To The Sky(cyber True Color)	1	5	8	9	-
+13021	with you…	-	4	6	9	-
+13022	Winning Eleven9 Theme (IIDX EDITION)	-	4	7	9	-
+13023	bluemoon	-	4	7	10	-
+13024	This is Love	-	4	8	10	-
+13025	罠	-	3	8	10	-
+13026	Ganymede	-	6	10	11	12
+13027	Ubiquitous Fantastic Ride	-	4	7	8	-
+13028	BALLAD THE FEATHERS	-	4	6	8	-
+13029	Sun Field	-	3	8	11	-
+13030	Enjoy your life	-	4	6	8	-
+13031	DUE TOMORROW	-	6	9	12	-
+13032	BOOM BOOM DISCO NIGHT	-	5	8	10	-
+13033	Tonight?	-	3	6	8	-
+13034	tripping contact	-	6	9	12	-
+13035	Power of Love	-	5	7	10	-
+13036	ay carumba!!!!	-	6	9	10	-
+13037	So Fabulous !!	-	5	8	10	-
+13038	waxing and wanding	-	7	10	11	12
+13039	Harmony and Lovely	-	4	8	11	-
+13040	MINT	-	6	10	11	-
+13041	EURO-ROMANCE	-	5	8	10	-
+13042	tiger yamato	-	4	7	9	-
+13043	Pretty Punisher	-	4	7	10	-
+13044	TYPE MARS(G-Style Mix)	-	5	9	11	-
+13045	Crazy K.I.N.O.	-	5	7	9	-
+13046	Broadbanded	-	5	8	11	-
+13047	Double&#9825;&#9825;Loving Heart	1	3	6	9	-
+13048	Zenius -I- vanisher	-	5	7	10	-
+13049	Parasite World	-	6	9	10	-
+13050	WISH(EUROBEAT MIX)	-	5	8	9	-
+13051	tripping contact(teranoid&MC Natsack Remix)	-	6	10	11	-
+13052	MOON	-	5	9	10	-
+13053	虹色	-	5	8	9	-
+13054	Concertino in Blue	2	5	10	12	-
+13055	カゴノトリ～弐式～	-	6	9	12	-
+13057	Why did you go away -BOY'S REASON-	3	5	8	10	-
+13201	321 STARS	-	5	8	10	-
+13202	Attack the music	-	1	5	6	-
+13203	Back Into The Light (recut)	-	6	9	10	-
+13204	Bleeding Luv ～Immorality act～	-	6	8	11	-
+13205	breathless	-	4	7	9	-
+13208	Hybrid Landscape	-	4	8	9	-
+13209	LIGHT MOTION	-	5	6	8	-
+13211	super highway	-	4	7	8	-
+13212	The Hope of Tomorrow (recut)	-	6	8	10	-
+13213	VANISHING POINT	-	4	8	10	-
+13215	DEEP ROAR(Old Version)	-	5	7	9	-
+14000	リグレット	-	6	8	10	-
+14001	INORI	-	6	10	11	-
+14002	PHOTONGENIC	-	7	10	10	-
+14003	Love Again...	-	3	4	5	-
+14004	TRANOID	-	5	10	11	12
+14005	Candy Galy	-	7	10	12	-
+14006	never…	-	4	7	8	-
+14007	GOLD RUSH	3	7	9	11	-
+14008	CaptivAte～誓い～	-	6	9	10	-
+14009	VANESSA	-	8	11	12	12
+14010	GHOSTBUSTERS	1	3	5	7	-
+14011	星をこの手に	-	7	9	10	-
+14012	零 - ZERO -	1	6	8	9	10
+14013	STARS☆☆☆(Re-tuned by HΛL) - IIDX EDITION -	1	5	8	9	-
+14014	Blind Justice ～Torn souls, Hurt Faiths ～	-	6	8	11	-
+14015	Air Bell	-	5	6	8	-
+14016	ヨシダさん	-	5	7	9	-
+14017	Play back hate you	-	4	8	9	-
+14018	ANDROMEDA II	-	5	9	10	-
+14019	Cyber Force	2	5	9	10	-
+14020	smile	-	7	9	11	-
+14021	LASER CRUSTER	-	7	11	12	-
+14022	GRID KNIGHT	-	6	8	10	12
+14023	CROSSROAD ～Left Story～	-	5	8	10	-
+14024	HALF MOON	-	4	8	10	-
+14025	鬼言集	-	6	8	10	-
+14026	Yabis Starlight	-	5	8	10	-
+14027	earth-like planet	-	4	7	10	-
+14028	花吹雪 ～ IIDX LIMITED ～	-	4	6	8	-
+14029	電人、暁に斃れる。	3	7	10	12	-
+14030	FIRE FIRE	3	7	10	12	-
+14031	the shadow	-	6	9	11	-
+14032	Come On	-	4	7	8	-
+14033	Second Heaven	1	5	8	11	-
+14034	Dreaming Sweetness	-	6	8	10	-
+14035	Sense 2007	-	9	11	12	-
+14036	2hot2eat	-	4	7	9	-
+14037	Make Me Your Own	-	5	9	10	-
+14038	heaven above	2	5	7	9	-
+14039	With your Smile	-	4	6	8	-
+14040	Roulette	-	5	8	10	-
+14041	So Real	-	4	6	8	-
+14042	シティ・エンジェル	-	5	7	10	-
+14043	X-rated	-	4	8	10	-
+14044	op.31 叙情	-	4	9	10	-
+14045	カミロ・ウナ・メンデス	-	3	7	10	-
+14046	KAMAITACHI	-	6	9	11	12
+14047	METALLIC MIND	-	4	8	9	-
+14048	My Only Shining Star	-	5	7	9	-
+14049	CaptivAte～裁き～	3	6	8	9	-
+14050	High School Love	2	4	6	9	-
+14051	The Smile of You	2	4	7	8	-
+14052	Fascination MAXX	-	9	11	12	-
+14053	snow storm	1	4	9	10	12
+14054	HONEY♂PUNCH	1	4	7	9	-
+14055	four-leaf	-	4	6	8	-
+14056	クルクル☆ラブ～Opioid Peptide MIX～	2	5	8	10	-
+14057	Red Rocket Rising	1	5	7	10	-
+14058	Watch out!!	-	4	6	9	-
+14059	CROSSROAD -Right Story-	-	5	8	10	-
+14201	Beginning of life(THE GROUND PULSE MIX)	-	5	8	11	-
+14204	Electrified	-	4	8	10	-
+14205	feeling of love	-	2	6	9	-
+14206	Guilt & Love	-	6	9	10	-
+14212	Treasure×Star	-	4	9	10	-
+14213	Turning the motor over	-	3	5	6	-
+15000	Anisakis -somatic mutation type"Forza"-	3	6	10	11	12
+15001	MENDES	-	6	11	12	12
+15002	Darling my LUV	-	4	6	8	-
+15003	MAX LOVE	3	5	8	10	-
+15004	Blue Rain	2	6	8	11	12
+15005	four pieces of heaven	-	5	10	11	12
+15006	走馬灯 -The Last Song-	-	3	4	7	-
+15007	THE DEEP STRIKER	2	6	10	11	12
+15008	STEEL NEEDLE	-	6	10	11	12
+15009	SOUND OF GIALLARHORN	2	6	10	11	-
+15010	REMINISCENCE//001 -rebirth-	-	6	9	10	-
+15011	PROMISE FOR LIFE	-	3	7	8	-
+15012	高高度降下低高度開傘	-	5	8	9	-
+15013	oratio	-	7	10	12	-
+15014	Ristaccia	-	6	9	12	-
+15015	NEW GENERATION -もう、お前しか見えない-	-	5	9	10	12
+15016	TROOPERS	-	6	10	12	12
+15017	SHIFT	-	5	8	10	-
+15018	マチ子の唄	-	4	6	8	11
+15019	beatonic nation	-	5	8	9	-
+15020	State Of The Art	-	5	8	11	-
+15021	end of world	-	6	9	10	-
+15022	evergreen	-	5	7	10	-
+15023	ICARUS	-	7	10	12	12
+15024	Dazzlin' Darlin	2	4	7	10	-
+15025	Do it!! Do it!!	-	8	10	11	12
+15026	Time to Air	-	6	10	11	12
+15027	avant-guerre	-	4	7	10	-
+15028	Digitank System	-	6	9	11	-
+15029	エコ爺	2	4	6	9	-
+15030	2 tribe 4 K	-	5	7	11	-
+15031	madrugada	-	4	7	10	-
+15032	MENTAL MELTDOWN	-	6	10	11	12
+15033	ROCK ME NOW	-	6	9	10	-
+15034	JOURNEY TO "FANTASICA" (IIDX LIMITED)	-	4	8	9	-
+15035	叶うまでは	-	4	7	9	-
+15036	soldier's waltz	-	5	9	10	-
+15037	I'm In Love Again -DJ YOSHITAKA REMIX-	-	6	8	10	-
+15038	the trigger of innocence	-	5	7	9	11
+15039	少年A	-	6	10	12	-
+15040	scar in the earth	-	4	5	8	-
+15041	Be OK	-	5	8	10	11
+15042	湘南族 -cannibal coast-	1	4	5	8	-
+15043	Kick Out 仮面	2	5	7	9	-
+15044	satfinal	-	5	7	9	-
+15045	Wanna Party?	-	4	7	8	11
+15046	radius	-	4	8	9	-
+15047	Now and Forever	-	5	8	10	-
+15048	Freeway Shuffle	2	4	7	10	-
+15049	PARANOiA ～HADES～	-	7	11	12	-
+15050	TRIP MACHINE PhoeniX	-	6	9	10	-
+15051	Shades of Grey	1	5	6	8	-
+15052	Rising in the Sun(original mix)	-	5	9	11	-
+15053	REMINISCENCE//002 -life-	-	6	9	10	-
+15054	華爛漫 -Flowers-	2	6	8	10	12
+15055	switch	-	5	9	11	-
+15056	ミラージュ・レジデンス	-	5	9	10	12
+15057	in the Sky	-	7	9	11	-
+15058	LOVELY STORM	-	6	9	10	-
+15059	satellite020712 from "CODED ARMS"	-	6	9	11	-
+15060	REMINISCENCE//003 -destiny-	-	6	9	10	-
+15061	Übertreffen	-	6	10	11	12
+15201	Around The Galaxy(Old Version)	-	4	7	10	-
+15203	Biometrics Warrior	-	5	10	12	-
+15206	CRYMSON	-	5	6	9	-
+15210	Pluto	-	8	11	12	-
+15214	symptom	-	4	9	11	-
+15216	WHAT'S NEXT?	-	5	9	10	-
+15217	Rising in the Sun(original mix)(Old Version)	-	5	9	10	-
+15218	soldier's waltz(Old Version)	-	5	9	10	-
+15219	TRIP MACHINE PhoeniX(Old Version)	-	4	9	10	-
+15220	madrugada(Old Version)	-	4	7	9	-
+15221	State Of The Art(Old Version)	-	5	8	9	-
+15222	Rise'n Beauty(CS DJT Version)	-	7	8	10	-
+15301	2 tribe 4 K(Old Version)	-	5	7	9	-
+15302	SWITCH(CS DJT Version)	-	5	6	9	-
+15559	satellite020712 from "CODED ARMS"(Old Version)	-	5	8	11	-
+16000	CaptivAte2～覚醒～	1	6	9	11	12
+16001	翼	1	4	7	9	10
+16002	B4U(BEMANI FOR YOU MIX)	-	6	9	11	12
+16003	Colorful Cookie	3	5	10	12	-
+16004	V2	3	6	10	11	-
+16005	天空脳番長危機十六連打	-	5	10	11	-
+16006	不沈艦CANDY	3	6	9	12	-
+16007	JEWELLERY STORM	-	5	8	10	-
+16008	HYPERION	-	6	9	11	-
+16009	BITTER CHOCOLATE STRIKER	3	5	10	12	-
+16010	Fly Above	-	5	6	8	-
+16011	Arabian Rave Night	-	6	10	11	12
+16012	アタックNO.3	-	5	7	9	-
+16013	山岡晃の「クイズ！家事都合！」	-	4	7	10	-
+16014	Queen's Tragedy	-	4	8	10	-
+16015	Kung-fu Empire	-	6	10	11	12
+16016	ミッドナイト堕天使	-	5	7	11	-
+16017	ALL MY TURN -このターンに、オレの全てを賭ける-	-	6	9	11	12
+16018	Marie Antoinette	-	6	9	11	12
+16019	Turii ～Panta rhei～	2	4	9	10	-
+16020	卑弥呼	-	6	11	12	12
+16021	smooooch・∀・	2	4	8	10	11
+16022	Flash Back 90's	-	4	8	10	11
+16023	Programmed World	3	5	9	11	-
+16024	まほろば	-	5	7	9	11
+16025	Mind Mapping	3	4	7	9	10
+16026	3y3s	3	7	10	12	-
+16027	Monkey Dance '09	3	4	8	10	-
+16028	Y&Co. is dead or alive	-	5	9	12	-
+16029	ALL I NEED YOUR LOVE	-	5	7	9	-
+16030	NΦ CRIME -English Version-	2	4	7	9	10
+16031	naughty girl@Queen's Palace	-	5	9	11	11
+16032	BRIDAL FESTIVAL !!!	-	4	7	9	-
+16033	MY FUTURE	-	5	8	9	-
+16034	Punch Love♡仮面	3	5	8	10	11
+16035	I'm Screaming LOVE	2	4	6	7	-
+16036	鉄甲乙女-under the steel-	-	4	7	10	-
+16037	You'll say "Now!"	-	6	10	11	-
+16038	Secrets	-	6	9	11	12
+16039	ハリツヤランデヴー	-	5	8	10	-
+16040	neogenesis	3	4	6	9	11
+16041	THE SHINING POLARIS(kors k mix)	-	6	9	11	-
+16042	Bahram Attack-猫叉Master Remix-	-	4	9	10	11
+16043	Cyber Force -DJ Yoshitaka Remix-	3	5	9	10	-
+16044	PSYCHE PLANET-GT	-	6	9	10	-
+16045	THANK YOU FOR PLAYING	-	5	9	10	12
+16046	HOUSE NATION	1	4	7	9	-
+16047	thunder HOUSE NATION Remix	-	5	7	9	12
+16048	Our Song	1	4	7	9	-
+16049	Jack	-	5	7	10	11
+16050	凛として咲く花の如く	2	6	9	10	11
+16051	Go Beyond!!	3	6	10	12	-
+16052	SOLITON BEAM	-	6	9	10	-
+16053	Just a Little Smile	-	4	8	11	-
+16072	TUTORIAL HI-SPEED	-	1	-	-	-
+16080	HOW TO	-	1	-	-	-
+16081	TUTORIAL BASIC	-	1	-	-	-
+16082	TUTORIAL CN	-	1	-	-	-
+16201	Back Into The Light -Feelings Won't Fade Vocal Mix-	-	4	9	10	-
+16202	Electrorgasm	-	5	9	10	-
+16203	ERaSeR EnGinE DistorteD	-	5	10	11	-
+16204	FLAG OF PEACE	-	5	8	11	-
+16206	Gymnopedie 009	-	5	8	10	-
+16208	Sunshine Hero	-	2	7	9	-
+16211	Troposphere	-	5	8	10	-
+16212	ミッドナイト堕天使(Old Version)	-	5	7	9	-
+16213	Y&Co. is dead or alive(Old Version)	-	5	9	10	-
+16214	THE SHINING POLARIS(kors k mix)(Old Version)	3	5	8	9	-
+16301	NΦ CRIME -Japanese Version-	2	4	7	9	-
+17000	Elisha	2	6	10	11	-
+17001	たからもの	-	6	8	9	11
+17002	MIRACLE MEETS	-	6	9	11	-
+17003	NoN-Fiction Story!	-	4	7	10	-
+17004	DROP	2	4	9	11	-
+17005	Roots of my way!	2	4	7	9	-
+17006	G59	-	7	10	12	-
+17007	DOMINION	-	7	10	12	-
+17008	GALGALIM	-	6	10	11	-
+17009	EXUSIA	-	6	10	12	-
+17010	with me...	-	5	8	10	-
+17011	フェティッシュペイパー ～脇の汗回転ガール～	-	4	6	8	-
+17012	being torn the sky	-	4	7	10	-
+17013	She is my wife	3	5	9	10	-
+17014	NEW SENSATION -もう、あなたしか見えない-	-	6	10	11	-
+17015	Raison d'&ecirc;tre～交差する宿命～	1	5	10	11	-
+17016	Almagest	-	7	11	12	-
+17017	ワルツ第17番 ト短調”大犬のワルツ”	-	6	10	12	-
+17018	London Affairs Beckoned With Money Loved By Yellow Papers.	-	4	6	8	-
+17019	To the Future	-	5	7	9	-
+17020	バビロニア	-	4	7	8	-
+17021	Last Burning	-	5	7	10	-
+17022	Bad Maniacs	-	7	10	12	-
+17023	Programmed Sun	-	6	9	11	-
+17024	D	-	8	10	11	-
+17025	bloomin' feeling	2	7	9	11	-
+17026	Light Shine	-	5	7	10	-
+17027	DESIRE	-	5	9	11	-
+17028	AIR RAID FROM THA UNDAGROUND	3	7	9	11	12
+17029	Mysterious Time	-	4	7	9	-
+17030	Brazilian Fire	-	6	8	9	-
+17031	One of A Kind	-	4	8	9	-
+17032	Red. by Full Metal Jacket	-	6	10	12	-
+17033	コスモス	-	5	8	9	-
+17034	かずあそび	-	3	6	8	-
+17035	beatchic☆仮面～好き、でいさせて～	-	5	8	9	-
+17036	Sunrise	-	5	9	10	-
+17037	未来のプリズム	-	4	7	9	-
+17038	Chocolate Dancing	-	3	5	7	-
+17039	Keep it-秋葉工房mix-	-	5	9	10	-
+17040	Dazzlin' Darlin-秋葉工房mix-	-	4	8	10	-
+17041	Session 1 -Genesis-	-	6	9	11	-
+17042	Do Back Burn	-	4	7	10	-
+17043	Hydrogen Blueback	-	5	8	10	11
+17044	mosaic	-	7	10	12	-
+17045	MIRU key way	2	4	6	9	-
+17046	Empire State Glory	-	6	9	11	-
+17047	SPARK ! -essential RMX-	-	5	8	10	-
+17048	spiral galaxy -L.E.D. STYLE SPREADING PARTICLE BEAM MIX-	-	5	9	10	-
+17049	DENJIN AKATSUKINI TAORERU -SF PureAnalogSynth Mix-	-	6	8	9	-
+17050	CaptivAte～裁き～(SUBLIME TECHNO MIX)	-	6	8	10	-
+17051	bass 2 bass	1	4	7	10	-
+17052	IN THE NAME OF LOVE	3	4	7	9	-
+17053	Special One	2	5	7	9	-
+17054	Evans	3	6	11	12	-
+17055	水上の提督(Short mix from "幻想水滸伝V")	-	4	8	10	-
+17056	eRAseRmOToRpHAntOM	-	7	10	12	-
+17057	DAWN -THE NEXT ENDEAVOUR-	-	7	9	11	-
+17058	サヨナラ・ヘヴン	2	4	6	8	10
+17059	quell～the seventh slave～	-	4	9	12	-
+17060	SOLID STATE SQUAD	-	5	10	12	12
+17061	GOLDEN CROSS	-	5	9	12	-
+17062	The Story Begins	-	4	8	10	-
+17063	BEAUTIFUL ANGEL	-	4	8	10	-
+17064	THE LAST STRIKER	-	6	8	11	-
+17065	Sorrows	1	5	8	10	-
+17100	Almagest (HCN Ver.) 	-	7	11	12	-
+17200	Do Back Burn(Old Version)	-	4	7	9	-
+18000	Stay my side	-	4	6	8	-
+18001	Watch Out Pt.2	-	6	9	12	-
+18002	Tropical April	-	8	10	11	-
+18003	DAYDREAMER	-	6	8	10	-
+18004	perditus†paradisus	-	7	11	12	-
+18005	THE DOOR INTO RAINBOW	-	4	8	10	-
+18006	XANADU OF TWO	-	5	8	10	11
+18007	ELECTRIC MASSIVE DIVER	-	6	10	12	-
+18008	THE BLACK KNIGHT	-	5	10	11	-
+18009	PARADISE LOST	-	7	11	12	-
+18010	Never Fade Away	-	4	8	11	-
+18011	おおきなこえで	-	3	5	7	10
+18012	Destiny Sword	-	5	9	11	-
+18013	Aegis	-	6	8	11	-
+18014	ZETA～素数の世界と超越者～	2	4	9	11	-
+18015	旅人リラン	-	6	9	11	-
+18016	La Mar	-	4	6	8	-
+18017	Dances with Snow Fairies	-	7	10	12	12
+18018	I FIGHT ME	-	3	7	9	11
+18019	Vermillion	-	5	7	10	-
+18020	Programmed Life	-	6	9	10	-
+18021	Kailua	-	5	9	11	-
+18022	Bounce Bounce Bounce	-	5	9	11	-
+18023	Mermaid girl	3	5	8	10	-
+18024	passionate fate	-	6	8	10	-
+18025	Golden Palms	-	5	8	10	11
+18026	New Castle Legions	-	6	10	12	-
+18027	BLUST OF WIND	-	5	8	10	11
+18028	BROKEN EDEN	-	6	9	11	-
+18029	かげぬい ～ Ver.BENIBOTAN ～	3	5	7	9	-
+18030	Rock Da House	-	5	9	11	-
+18031	EXTREMA PT. 2	-	4	7	10	-
+18032	灼熱Beach Side Bunny	3	7	10	12	-
+18033	Raise your hands	-	6	8	10	-
+18034	You Were The One	-	5	8	10	-
+18035	Answer	-	4	7	10	-
+18036	WISE UP!	2	3	7	9	11
+18037	恋愛レボリューション21-秋葉工房mix-	-	4	7	9	-
+18038	LIFE SCROLLING	-	4	8	10	-
+18039	Session 9 -Chronicles-	-	5	10	12	-
+18040	Space Time	-	4	8	10	-
+18041	ラクエン Feat.Chiharu Chonan -JAKA respect for K.S.K. Remix	-	6	8	10	-
+18042	夕焼け ～Fading Day～	-	5	9	11	-
+18043	Believe In Me	-	5	9	11	-
+18044	Let The Track Flow	-	6	9	11	-
+18045	Energy Drive	-	6	8	11	-
+18046	Hardcore Mania	-	6	8	10	-
+18047	Breaking the ground	-	5	8	10	-
+18048	Programmed Sun (xac Antarctic Ocean mix)	-	4	7	10	-
+18049	Cansei de S NIK	3	4	7	9	-
+18050	reunion	3	8	11	12	-
+18051	ANTHEM LANDING	-	5	9	11	-
+18052	Get Out	-	4	7	9	-
+18053	Medicine of love	-	4	6	9	-
+18054	Eternal Tears	-	2	5	7	-
+18055	Fantasia	1	3	8	10	-
+18056	SABER WING	-	5	9	11	-
+18057	DM STAR～関西 energy style～	-	6	9	10	-
+18058	WE LOVE SHONAN	-	4	9	10	-
+18059	ALBIDA	3	6	10	12	-
+18060	黒髪乱れし修羅となりて	-	4	9	12	-
+18061	sakura storm	-	5	8	12	-
+18062	Everlasting Resort	-	4	7	10	-
+18063	Take Me Higher	-	4	8	10	-
+18064	STELLAR WIND	2	4	9	11	-
+18065	Love?km	2	3	8	10	-
+18066	Sakura Reflection	-	3	9	11	-
+18067	THE FALLEN	-	5	8	11	-
+18068	Broken	-	5	9	12	-
+18069	Wuv U	-	3	8	10	-
+18070	Survival Games	-	4	7	10	-
+18071	SPECIAL SUMMER CAMPAIGN!	-	4	8	12	-
+18072	中華急行	-	2	8	10	-
+18102	Kailua (HCN Ver.)	-	5	9	11	-
+18201	jewelry girl*	2	4	7	9	-
+18202	HONEY♂PUNCH ～L.E.D.-G STYLE MIX～	3	5	8	10	-
+18203	New Castle Legions(Old Version)	-	6	10	11	-
+19001	Snake Stick	-	6	10	12	-
+19002	天空の夜明け	-	7	10	12	-
+19003	F	-	5	10	12	-
+19004	In the Blackest Den	-	5	8	11	-
+19005	恋する☆宇宙戦争っ！！	2	5	8	12	12
+19006	ANAGRAMS I to Y	-	4	7	9	-
+19007	YAKSHA	-	6	10	12	-
+19008	DIAVOLO	-	6	9	12	-
+19009	Scharfrichter	-	5	9	11	-
+19010	Lucky Days	-	4	8	10	-
+19011	CALL	-	2	5	8	11
+19012	KYAMISAMA ONEGAI!	-	3	6	9	11
+19013	Several Words	-	4	8	10	-
+19014	SA.YO.NA.RA. SUPER STAR	-	4	8	10	-
+19015	蛇神	2	4	8	11	12
+19016	Todestrieb	-	5	9	12	-
+19017	GIGANT	-	3	6	9	11
+19018	prompt	-	5	8	11	-
+19019	衰色小町メランコリア	-	4	7	10	-
+19020	Quick Silver	-	5	9	11	-
+19021	Into The Sunlight	-	5	8	10	-
+19022	君のハートにロックオン	-	4	9	11	12
+19023	ЁVOLUTIΦN	-	4	8	10	-
+19024	Almace	-	4	8	10	-
+19025	Drive Me Crazy	-	4	7	10	-
+19026	The Sampling Paradise	-	5	9	12	-
+19027	Release The Music	-	4	7	10	-
+19028	Thunderbolt	-	5	9	12	-
+19029	Follow Tomorrow	-	4	8	10	-
+19030	NNRT	-	6	10	12	-
+19031	SHADE	-	5	9	11	-
+19032	24th Century BOY	-	5	9	11	-
+19033	The Limbo	-	6	10	12	12
+19034	Miami Sunset Drive	-	4	6	9	-
+19035	A MINSTREL ～ ver. short-scape ～	-	3	6	9	12
+19036	LAX5 feat.Ryota Yoshinari	-	6	9	10	-
+19037	BLACK.by X-Cross Fade	-	6	10	12	-
+19038	Yellow Sunrise	-	4	7	10	-
+19039	陽炎	-	3	6	9	-
+19040	Mermaid girl-秋葉工房 MIX-	-	4	6	9	-
+19041	Session 12 -Esther-	-	6	10	12	-
+19042	聖人の塔	-	6	10	12	12
+19043	DON'T WAKE ME FROM THE DREAM (2010 Summer Edition)	-	3	7	9	-
+19044	Electric Super Highway	-	3	6	9	-
+19045	Express Emotion	-	4	6	10	-
+19046	突撃!ガラスのニーソ姫!	-	4	7	10	-
+19047	Liquid Crystal Girl feat. echo	-	2	6	9	-
+19048	Round and Round	-	4	6	9	-
+19049	Star Trail	-	4	7	10	11
+19050	LOVE B.B.B	-	4	8	10	-
+19051	Voxane	-	3	7	9	-
+19052	Change the World	-	5	7	9	-
+19053	ユミル	-	3	7	11	12
+19054	Phoenix	-	5	7	10	12
+19055	RESISTANCE	-	3	7	10	-
+19056	LETHEBOLG ～双神威に斬り咲けり～	-	5	8	10	-
+19058	I'm so Happy	2	3	8	11	-
+19059	Snow Goose	2	3	8	11	-
+19060	Far east nightbird	2	3	7	9	-
+19061	PentaCube Gt.(RX-Ver.S.P.L.)	-	4	8	9	-
+19062	Infinite cave	-	6	9	10	-
+19063	QUANTUM TELEPORTATION	-	7	10	11	12
+19064	fffff	-	4	10	12	-
+19065	子供の落書き帳	-	6	10	12	-
+19066	Trust -MATERIAL ver- (IIDX Edition)	-	4	7	9	-
+19067	yellow head joe	-	4	8	10	12
+19068	WONDER WALKER	-	5	9	12	-
+19069	532nm	-	3	7	11	-
+19070	ビューティフルレシート	1	3	8	10	-
+19071	quaver♪	1	4	9	12	-
+19072	Castle on the Moon	1	4	9	11	-
+19073	Flip Flap	1	3	7	10	-
+19074	TITANS RETURN	2	4	8	11	12
+19075	HAERETICUS	-	5	10	12	-
+20000	planarian	-	4	8	10	-
+20001	Fractal	-	6	9	11	-
+20002	Liberation	-	6	9	12	-
+20003	ΕΛΠΙΣ	-	6	10	12	12
+20004	狂イ咲ケ焔ノ華	-	6	10	12	-
+20005	BLUE STRAGGLER	-	4	7	10	-
+20006	トリカゴノ鳳凰	-	6	9	12	-
+20007	キャトられ♥恋はモ～モク	-	6	10	12	-
+20008	Confiserie	-	5	10	12	-
+20009	POINT ZERO	-	4	7	10	-
+20010	portal	-	4	7	10	-
+20011	connective	1	2	6	8	-
+20012	Proof of the existence	1	6	10	12	-
+20013	Rainbow after snow	-	4	7	10	-
+20014	Tp-RZ	-	5	7	10	-
+20015	Re:GENERATION	1	5	8	10	-
+20016	In Heaven	-	4	7	9	-
+20017	GRADIUS 2012	-	5	8	10	-
+20018	CONCEPTUAL	-	5	7	11	-
+20019	龍と少女とデコヒーレンス	-	5	8	11	12
+20020	Elemental Creation	1	7	10	12	-
+20021	8bit Princess	-	3	6	10	-
+20022	下弦の月	-	5	7	9	-
+20023	New Lights	-	6	9	10	-
+20024	Howling	-	4	7	9	10
+20025	VEGA	-	5	9	11	-
+20026	masquerade	-	4	8	10	-
+20027	Präludium	-	4	8	10	-
+20028	rumrum triplets	-	5	10	11	-
+20029	Thor's Hammer	-	5	10	12	-
+20030	BRAVE GLOW	-	4	8	10	-
+20031	Illegal Function Call	-	5	9	11	12
+20032	Ascalon	-	5	8	10	-
+20033	I know You know	-	3	6	9	-
+20034	Echo Of Forever	-	3	6	9	-
+20035	S!ck	-	5	8	11	-
+20036	405nm (Ryu☆mix)	-	5	9	11	-
+20037	Fly you to the star	-	4	8	10	-
+20038	Plan 8	-	6	10	12	-
+20039	仮想空間の旅人たち	-	5	9	11	12
+20040	Light and Cyber…	-	5	9	11	-
+20041	SYNC-ANTHEM	-	5	10	12	-
+20042	Spinning Around	-	5	7	10	-
+20043	Timepiece phase II (CN Ver.)	-	6	10	12	-
+20044	ラキラキ	-	4	8	10	-
+20045	Breaking Dawn feat. NO+CHIN, AYANO	-	5	8	11	-
+20046	Beastie Starter	-	3	7	11	-
+20047	†渚の小悪魔ラヴリィ～レイディオ†(IIDX EDIT)	1	3	9	12	-
+20048	Little Star	-	5	8	12	-
+20049	アストライアの双皿	-	4	9	12	-
+20050	To my star	-	3	6	9	-
+20051	Sol Cosine Job 2	-	6	9	12	-
+20052	ILIAS	-	4	7	10	-
+20053	FLOWER	2	6	9	11	-
+20054	即席！脳直★ミュージックシステム	-	6	10	12	-
+20055	カジノファイヤーことみちゃん	-	4	8	11	12
+20056	Deceive Your Insight	-	5	8	11	-
+20057	Holy Snow	-	4	8	10	-
+20058	True Blue	-	5	10	12	-
+20059	Take My Life	-	5	8	11	-
+20060	晴天Bon Voyage	-	3	7	9	-
+20061	メイメツ、フラグメンツ	-	4	8	10	-
+20062	STULTI	-	5	10	12	-
+20063	Devilz Staircase	1	3	10	12	-
+20064	ZED	-	5	8	11	-
+20065	Shining World	1	6	8	9	-
+20066	Neonlights	-	4	8	10	-
+20067	Timepiece phase II	-	5	10	12	-
+20068	LUV CAN SAVE U	-	3	7	9	10
+20069	虹色の花	-	4	8	10	-
+20070	DAY DREAM	-	5	10	12	-
+20071	JOMANDA	1	6	10	12	-
+20072	New Decade IIDX Edition	1	5	9	11	-
+20073	Hollywood Galaxy	-	5	10	12	-
+20074	neu	1	6	10	12	-
+20075	YELLOW FROG from Steel Chronicle	-	3	7	9	11
+20076	Reflection Into the EDEN	-	4	7	10	-
+20082	Time To Empress	-	4	9	10	11
+20083	たまゆら	-	7	10	12	-
+20086	Saturn	-	7	10	11	12
+20087	Cookie Bouquets	-	5	9	11	-
+20088	mnemoniq	-	4	5	8	-
+20089	お米の美味しい炊き方、そしてお米を食べることによるその効果。	-	5	8	10	12
+20090	創世ノート	-	4	9	11	-
+20091	Synergy For Angels	-	4	8	11	-
+20092	Empathetic	-	4	7	10	-
+20093	GAIA	-	5	10	12	-
+20094	Zirkfied	-	5	10	12	-
+20095	examination leave	-	6	9	11	-
+20096	VALLIS-NERIA	1	6	10	11	-
+20097	Valanga	-	7	10	12	-
+20098	梅雪夜	-	5	7	10	-
+20099	音楽	-	5	10	12	-
+20100	朧	1	4	7	10	11
+20101	シュレーディンガーの猫	-	6	10	12	-
+20102	SHION	-	4	7	10	-
+21001	rainbow guitar weeps	-	5	9	11	-
+21002	旋律のドグマ～Misérables～	-	6	10	12	-
+21003	EXTREME MACH COLLIDER	-	5	8	11	-
+21004	Element of SPADA	-	3	7	9	11
+21005	DARK LEGACY	1	6	9	12	-
+21006	牧神笛吹きて	-	4	8	11	-
+21007	Critical Crystal	1	6	8	11	-
+21008	Insane Techniques	-	4	7	11	-
+21009	esrev:eR	-	4	7	9	-
+21010	WOBBLE IMPACT	-	3	7	10	-
+21011	罪と罰	-	5	7	10	-
+21012	Close the World feat.a☆ru	-	5	10	12	12
+21013	Devilz Sacrifice -贖罪の羊-	-	5	9	11	-
+21014	MAGIC & LOVE	-	5	9	11	-
+21015	Miracle 5ympho X	-	5	8	10	12
+21016	Elektrick U-Phoria	-	6	9	11	12
+21017	死神自爆中二妹アイドルももかりん(1歳)	-	4	7	11	-
+21018	Overload Frontier	1	5	8	11	-
+21019	Adularia	1	6	10	12	-
+21020	Valgus	-	4	7	11	-
+21021	Odin	-	4	7	10	-
+21022	MAD ATTACK	-	3	6	9	12
+21023	Atr?p?s	1	6	8	11	-
+21024	Funny shuffle	-	3	6	11	-
+21025	NPC World	-	5	8	10	-
+21026	Lighting Shower	-	4	7	11	-
+21027	m1dy Deluxe	-	6	9	11	-
+21028	LA FESTA LA VITA!!	-	5	9	11	-
+21029	廿	-	5	8	10	12
+21030	超!!遠距離らぶ♡メ～ル	-	3	7	10	-
+21031	幻想系世界修復少女	1	4	7	10	-
+21032	煉獄のエルフェリア	-	7	10	12	-
+21033	INSOMNIA	-	4	8	12	-
+21034	Wonder Girl feat. Kanae Asaba	-	4	6	11	-
+21035	RISE	-	5	8	10	-
+21036	Give Me Your Love	-	4	7	9	-
+21037	ALBA -黎明-	-	5	8	11	12
+21038	お願いアインシュタイン	-	5	8	10	-
+21039	into the battlefield	-	4	8	10	-
+21041	diagram	-	3	7	11	-
+21042	refractive index	-	3	7	11	-
+21043	Hypersonik	-	5	8	10	-
+21044	BLUE DRAGON(雷龍RemixIIDX)	-	7	10	12	-
+21045	Last Dance	-	6	10	12	-
+21046	All is Wrecked	-	5	8	11	-
+21047	ra'am	-	8	10	12	-
+21048	疾風迅雷	-	6	10	12	12
+21049	Immortal	-	5	9	12	-
+21050	Verflucht	-	6	10	12	12
+21051	BRAVE OUT	-	5	8	10	11
+21052	Feel The Beat	-	7	10	12	12
+21053	Pharaoh	-	3	8	11	-
+21054	Shattered control	-	4	8	10	-
+21055	Idola	-	6	10	12	-
+21056	I will be back -オレは帰ってきた-	-	6	9	11	-
+21057	Smug Face -どうだ、オレの生き様は- (ONLY ONE EDITION)	-	6	9	11	-
+21058	アルストロメリア	1	5	8	10	-
+21059	Sigmund	-	7	10	12	12
+21060	ÆTHER	-	5	8	11	12
+21061	M.D.Injection	-	3	6	10	12
+21062	VOX UP	-	8	11	12	-
+21063	BRAINSTORM	-	4	10	11	-
+21064	Recollection	-	5	7	9	-
+21065	Claiomh Solais	-	2	6	9	-
+21066	Unicorn tail	-	5	9	11	-
+21067	RIZING YOU UP	-	6	9	10	-
+21068	THE DETONATOR	-	7	10	11	-
+21069	Ancient Scapes	-	6	10	12	12
+21070	Votum stellarum -Hommarju Remix-	-	6	9	11	-
+21071	NEMESIS -gratitude remix- IIDX Edition	-	6	9	11	-
+21072	Dark Fall	-	5	8	11	-
+21073	invoker	-	5	9	12	12
+21074	Stella Sinistra	-	3	7	11	-
+21075	マインド・ゲーム	-	4	8	11	-
+21076	PUNISHER	-	5	9	12	-
+21077	HYENA	-	6	9	11	12
+21078	Squeeze	-	5	8	11	-
+21079	デッドボヲルdeホームラン	-	3	9	11	-
+21080	野球の遊び方　そしてその歴史　～決定版～	-	3	7	10	-
+21081	轟け！恋のビーンボール！！	-	6	10	12	-
+21082	IX	-	6	11	12	-
+21083	Engraved Mark	-	4	8	11	-
+21084	バンブーソード・ガール	1	5	9	11	-
+21085	Cleopatrysm	-	4	8	11	-
+21086	御千手メディテーション	-	4	9	11	-
+21087	KHAMEN BREAK	-	3	7	11	-
+21088	海神	-	7	10	12	12
+21089	KAISER PHOENIX	-	7	10	12	12
+21090	SCHWARZSCHILD FIELD	-	6	9	11	-
+21201	Scripted Connection⇒ long mix	-	7	10	12	12
+21265	3y3s(Long ver.)	-	7	10	12	-
+22001	Broken Sword	-	7	10	12	-
+22002	Line 4 Ruin	-	4	9	11	-
+22003	Rave*it!! Rave*it!!	-	6	9	12	-
+22004	Shooting Fireball	-	6	10	12	-
+22005	Say YEEEAHH	-	6	9	12	-
+22006	Cosmic Cat	-	6	9	11	12
+22007	Reflux	-	5	9	12	12
+22008	CHRONO DIVER -NORNIR-	-	5	9	11	12
+22009	表裏一体！？怪盗いいんちょの悩み♥	-	6	10	12	12
+22010	もっと！モット！ときめき feat. 松下	-	6	9	11	-
+22011	NEO GENERATOR SEVEN	-	5	9	12	-
+22012	共鳴遊戯の華	-	7	10	12	-
+22013	chrono diver -fragment-	-	3	6	9	10
+22014	AFRO KNUCKLE	-	5	8	11	-
+22015	Despair of ELFERIA	-	7	10	12	-
+22016	Flashes	-	6	9	12	-
+22017	Symmetry	-	6	10	12	-
+22018	FANTASTIC THREE	-	7	10	12	-
+22019	illuminate	-	3	8	10	-
+22020	subtractive	-	4	7	10	-
+22023	デンドロビウム	-	4	8	10	-
+22024	恋は白帯、サンシロー	-	3	6	9	11
+22025	Chain of pain	-	4	8	10	-
+22026	白露の風	-	2	6	9	-
+22027	Beat Radiance	-	5	8	10	12
+22028	GUILTY	-	5	8	10	12
+22029	COLOSSEUM	-	4	7	11	-
+22031	超青少年ノ為ノ超多幸ナ超古典的超舞曲	-	6	9	11	12
+22032	リリーゼと炎龍レーヴァテイン	-	6	10	12	-
+22033	cinder	-	5	9	12	-
+22034	Realize Maze	-	6	9	11	-
+22035	Ｘ↑Ｘ↓	-	5	8	11	-
+22036	Light My Fire	-	4	7	10	-
+22037	十六夜セツナ	-	5	7	10	-
+22038	紅牡丹	3	6	9	12	-
+22039	BLUE MIRAGE	-	5	10	12	-
+22040	#The_Relentless	-	6	9	11	12
+22041	Blaze it UP!	-	5	8	11	-
+22042	Sweet Radar	-	4	7	10	-
+22043	IMPLANTATION	-	5	10	12	-
+22044	Night sky	-	6	9	11	-
+22045	m1dy Festival	-	5	8	11	-
+22046	SAMSARA	-	4	7	10	-
+22047	時空トラベローグ	-	6	9	11	-
+22048	ぷろぐれっしぶ時空少女！うらしまたろ子ちゃん！	-	5	7	11	-
+22049	HELL SCAPER -Last Escape Remix-	-	5	8	11	-
+22050	Sometimes feat. Kanae Asaba	-	4	8	10	-
+22051	Amnolys	-	5	9	11	-
+22052	IXION	-	5	8	9	-
+22053	Gravigazer	-	5	10	12	-
+22054	Chrono Diver -PENDULUMs-	3	7	11	12	-
+22055	SpaceLand☆TOYBOX	-	6	9	12	-
+22056	TA・DA ☆ YO・SHI	-	5	8	10	-
+22057	Vulkan	-	5	9	11	-
+22058	Scars of FAUNA	-	5	8	11	-
+22059	ベィスドロップ・フリークス	-	4	7	10	11
+22060	Sakura Mirage	-	6	8	11	-
+22061	Hello Happiness	-	5	9	11	-
+22062	打打打打打打打打打打	1	5	8	11	-
+22063	No Tears	-	6	9	11	-
+22064	鬼天	-	6	9	11	-
+22065	entelecheia	-	6	10	12	-
+22066	Don't Stop The Music feat.森高千里	-	3	6	9	-
+22067	とろぴかる倶楽部	-	5	8	11	-
+22068	Beyond The Earth	-	5	10	11	-
+22069	The Least 100sec	-	5	9	12	-
+22070	fallen leaves -IIDX edition-	-	6	10	12	-
+22071	Ludus In Tenebris	-	5	10	12	-
+22072	フェイクアウト	-	5	8	10	-
+22073	Monopole.	-	4	8	12	-
+22074	TOXIC VIBRATION	-	7	10	12	-
+22075	Erosion Mark	-	4	8	11	-
+22076	On My Wings(Hardstyle IIDX)	-	5	7	10	-
+22077	ZZ	1	6	10	12	-
+22078	Rave Saves You feat. Cardz (Exclusive IIDX Mix)	-	4	8	11	-
+22079	TIEFSEE	-	6	9	12	-
+22080	We're so Happy (P*Light Remix) IIDX ver.	-	6	10	12	-
+22081	Hollywood Galaxy(DJ NAGAI Remix)	-	6	10	12	-
+22082	全力 SPECIAL VACATION!! ～限りある休日～	-	6	8	11	-
+22083	千年ノ理	-	6	9	12	12
+22084	妖隠し -あやかしかくし-	-	5	9	10	-
+22085	取り残された美術(Arranged:HiZuMi)	1	5	8	10	-
+22086	Scarlet Moon	-	6	9	11	-
+22087	それは花火のような恋	3	6	10	12	-
+22088	パ→ピ→プ→Yeah!	2	6	9	11	-
+22089	EBONY & IVORY	-	6	9	12	12
+22090	In The Breeze	-	4	7	9	-
+22091	Sounds Of Summer	-	6	10	12	-
+22092	Chronos	-	5	8	11	11
+22093	少年は空を辿る	-	6	10	12	-
+22094	ドッキン☆サマーあばんちゅーる	-	5	8	11	-
+22095	夏色DIARY - L.E.D.-G STYLE MIX -	-	6	10	12	-
+22098	Discloze	-	6	9	11	-
+22099	Invitation from Mr.C	-	6	9	12	-
+22100	PENDUAL TALISMAN	-	5	8	11	-
+23000	DIAMOND CROSSING	-	7	10	12	-
+23001	駅猫のワルツ	-	6	10	12	-
+23002	SHELTER OF THE MIND	-	6	9	11	-
+23003	か・し・ま・し☆PUMP UP！	-	6	9	11	-
+23004	ギョギョっと人魚 爆婚ブライダル	-	4	8	10	-
+23005	Nightmare before oversleep	-	7	10	12	-
+23007	Highcharge Divolt	-	6	10	12	-
+23008	Uh-Oh	-	5	8	11	-
+23009	M4K3 1T B0UNC3	-	7	10	12	-
+23010	Donkey Donk	-	6	9	10	-
+23011	Everlasting Last	-	4	8	10	-
+23012	オルタネイトβ	-	4	7	10	-
+23013	refrain	-	6	10	12	-
+23014	Transport	-	5	7	10	-
+23015	Central Station	-	5	8	10	-
+23016	少女アリスと箱庭幻想コンチェルト	-	5	8	10	-
+23017	Outbreak	-	6	9	11	-
+23018	X	-	7	10	12	-
+23019	セロトニン	-	6	9	11	-
+23020	太陽SUNSUNボンジュールアバンチュール	-	6	8	11	-
+23021	Daily Lunch Special	-	6	9	11	-
+23022	明鏡止水	-	5	9	11	-
+23023	Dreamin Train	-	4	6	10	-
+23024	GET READY!!	-	6	9	11	-
+23025	To The Paradise	-	3	7	9	-
+23026	Go Faraway	-	5	7	10	-
+23027	Dynamite	3	7	10	12	-
+23028	Aublia	-	5	8	11	-
+23029	Musik LoverZ	-	5	7	10	-
+23030	Routing	-	6	9	11	-
+23031	STARLIGHT DANCEHALL	-	6	9	11	12
+23032	追想快晴テーマパーク	-	6	10	11	-
+23033	Set U Free feat. Kanae Asaba	-	4	8	10	-
+23034	SURVIVOR	-	4	7	9	-
+23035	星屑ディスタンシア	-	4	6	10	-
+23036	NANAIRO	-	5	9	10	-
+23037	AO-1	-	7	10	12	-
+23038	Nowhere	-	4	8	10	-
+23039	do the thing feat. Kanae Asaba	-	3	8	10	-
+23040	m1dy Dynamic	-	6	9	11	-
+23041	真 地獄超特急 -HELL or HELL-	-	7	10	12	-
+23042	Ride To The Core	-	5	9	11	-
+23043	Rock It	-	5	8	11	-
+23044	Violet Rose	-	7	9	11	-
+23045	めいさいアイドル☆あいむちゃん♪	-	7	10	12	-
+23046	量子の海のリントヴルム	-	6	9	11	-
+23047	シュッパツシンコウ・シサカンコ	-	5	8	10	-
+23048	麗 ～うらら～	1	5	9	11	-
+23049	NO LIMIT -オレ達に限界は無い-	-	4	6	10	-
+23050	朝焼けから始まるボクらの小さな旅	-	5	9	11	-
+23051	灼熱 Pt.2 Long Train Running	3	7	11	12	-
+23052	Inner Spirit	-	5	9	11	-
+23053	On the FM	-	6	8	11	-
+23054	Damage Per Second	-	4	7	9	10
+23055	199024club -Re:BounceKiller-	-	5	10	12	-
+23056	Arcana	-	6	8	10	-
+23057	Acid Pumper	-	4	9	11	-
+23058	Exchange Place	-	4	7	9	-
+23059	Wheel of Journey	-	3	8	10	-
+23060	quick master (reform version)	-	1	3	5	-
+23061	Devil's Gear	-	6	10	12	-
+23062	Tori-no-kimochi	-	1	6	10	-
+23063	Blue Spring Express	-	7	10	12	-
+23065	炸裂！イェーガー電光チョップ！！(JAEGER FINAL ATTACK)	-	6	9	11	-
+23066	GOBBLE	-	4	7	11	-
+23067	GENERATE feat.綾倉盟	-	5	8	10	-
+23068	chaos eater -IIDX edition-	-	5	9	11	-
+23069	Battle Train -IIDX Edition-	-	4	10	11	-
+23070	Welcome	-	4	10	11	12
+23072	Konzert V	-	6	10	12	-
+23073	Derelict Star feat. Ryu*	-	6	9	11	-
+23074	POSSESSION	3	7	10	12	-
+23075	Godspeed	-	7	10	12	-
+23076	La dolce primavera	-	4	8	10	-
+23077	OUTER LIMITS ALTERNATIVE	-	5	8	10	-
+23078	Glitch Nerds	-	5	8	10	-
+23079	NINJA IS DEAD IIDX ver.	-	6	9	12	-
+23080	Violet Pulse	-	2	8	10	12
+23082	STARLiGHT	-	5	9	11	-
+23083	紫陽花 -AZISAI-	2	7	10	12	12
+23084	Journey	-	3	6	9	11
+23085	CODE:1 [revision1.0.1]	-	5	9	12	-
+23086	SEITEN NO TERIYAKI	-	4	7	11	12
+23087	Super Duper Racers	-	4	8	10	-
+23088	NZM	-	6	9	12	-
+23090	Grand Chariot	-	7	10	12	-
+23091	Sephirot	-	5	8	10	-
+23092	StrayedCatz	-	6	10	12	-
+23093	Angelic Jelly	-	6	9	11	-
+23094	Triple Counter	-	7	10	12	-
+23095	ZEPHYRANTHES	-	5	9	11	12
+24000	鴉	-	7	10	11	-
+24001	焔極OVERKILL	-	6	10	12	-
+24002	RISING FIRE HAWK	-	5	8	11	-
+24003	イザナミノナゲキ	-	6	9	12	-
+24004	AsiaN distractive	-	5	8	11	-
+24005	Super Rush	-	6	9	12	-
+24006	Rave Cannon	-	5	9	12	-
+24007	Caterpillar	-	6	10	12	-
+24008	¡Viva!	-	5	8	10	11
+24009	OOO	-	3	7	10	11
+24010	Mare Nectaris	-	7	11	12	-
+24011	冬椿 ft. Kanae Asaba	1	5	7	10	11
+24012	TOGAKUSHI	-	5	10	12	-
+24013	SINOBUZ Fantasy	-	6	9	10	-
+24014	津軽雪	-	7	10	12	-
+24015	Modular Technology	-	6	10	11	-
+24016	Honey Trap	-	5	8	11	-
+24017	ROTTERDAM SHOGUN	3	6	9	11	-
+24018	DORNWALD ～Junge～	-	6	10	12	-
+24019	獅子霞麗ノ舞	-	4	6	9	-
+24020	ECHIDNA	-	6	10	12	-
+24021	Quakes	-	6	10	12	-
+24022	PAPAYAPA BASS	-	5	8	11	-
+24023	焱影	-	5	9	12	-
+24024	SAY BAY	-	5	8	12	-
+24025	(This Is Not) The Angels	-	4	8	11	-
+24026	Selfish Sweet	-	3	5	9	-
+24027	Be A Star	-	4	9	11	-
+24028	Egret and Willow	-	6	8	11	-
+24029	禍根	-	5	9	11	-
+24030	Sarutobi Champion is 拙者	-	6	9	11	-
+24031	次葉 -turn the page-	-	4	8	10	-
+24032	AO-∞	-	6	9	10	-
+24033	忍恋花	-	5	9	11	-
+24034	Go Ahead!!	-	7	10	12	-
+24035	DISAPPEAR feat. koyomin	-	4	9	11	-
+24036	#MAGiCVLGiRL_TRVP_B3VTZ	-	6	9	12	-
+24037	The Commanders	-	5	8	10	-
+24038	Umbral	-	3	7	10	12
+24039	Steel Edge	-	5	8	12	-
+24040	Music is The Answer	-	4	8	10	-
+24041	Amazing Mirage	2	5	9	11	12
+24042	Affection	-	3	6	10	-
+24043	XINOBIKILL	-	6	9	11	-
+24044	FUZIN RIZIN	-	5	9	12	-
+24045	ディッシュウォッシャー◎彡おいわちゃん	-	3	7	11	-
+24046	ちらちら・はらはら	-	3	5	7	-
+24047	Believe in you	-	5	8	10	-
+24048	Shoot'Em All	-	3	7	11	-
+24049	Breakin' Chain	-	4	8	10	-
+24050	GuNGNiR	-	7	11	12	12
+24051	HADES	2	5	9	12	-
+24052	Remedy feat. Kanae Asaba	-	5	8	10	-
+24053	お命ちょうDAI！901娘	-	5	8	10	-
+24054	Beyond The Seven	-	4	7	11	-
+24055	elemental bender feat. Kanae Asaba	-	3	6	8	-
+24056	Seaside Labyrinth	-	4	7	9	-
+24057	SAMURAI-Scramble	-	5	9	11	12
+24058	Warrior	-	5	8	10	-
+24059	Summer	-	3	7	10	-
+24060	Piano Samurai	-	5	9	10	-
+24061	Sweet Clapper	-	3	7	10	12
+24062	SCREAM THE LIFE FEAT.KYONO	-	4	8	10	-
+24063	BREAK OVER	-	5	9	11	-
+24064	Seize the Day	-	5	8	10	-
+24065	OTENAMI Hurricane	-	6	10	12	-
+24066	Magical	-	4	6	10	-
+24067	Yellow Sketch(RX-Ver.S.P.L.)	-	4	9	11	-
+24068	shuriken	-	4	6	10	-
+24069	yamabiko (SINOBUZ Edition)	-	5	8	11	-
+24070	九尾狐夜行	-	5	9	12	-
+24071	Around The Galaxy	-	5	9	11	-
+24072	Sky High	3	6	10	12	-
+24073	Snakey Kung-fu	-	6	10	12	-
+24074	月雪に舞う華のように	-	5	7	10	-
+24075	INVISIBLE STRIX	-	6	10	11	-
+24076	RAIN	-	6	9	12	-
+24077	刃図羅	-	6	10	12	-
+24078	〆	-	6	9	12	-
+24079	BabeL ～Grand Story～	-	6	10	11	-
+24080	BroGamer	-	7	9	11	12
+24081	Beat Juggling Mix	-	6	9	11	12
+24082	SEQUENCE CAT	-	5	10	11	-
+24083	nostos	-	5	8	11	-
+24084	crew	-	3	8	11	-
+24085	Macuilxochitl	3	7	10	11	-
+24086	Summerlights(IIDX Edition)	-	6	9	12	-
+24087	HAPPY★RUSH	-	4	9	11	-
+24088	Surf on the Light	-	4	8	10	-
+24089	Venom	-	6	10	12	-
+24090	Cyber True Color	-	5	9	11	-
+24091	恋はどう？モロ◎波動OK☆方程式!!	-	5	8	10	-
+24092	Vermilion	-	5	8	10	-
+24093	Lost wing at.0	-	5	8	11	-
+24094	童話回廊	-	5	9	12	-
+24095	Apocalypse	-	5	9	12	-
+25000	神謳 -RESONANCE-	-	7	10	12	-
+25001	THE CANNONBALLER	2	6	10	11	12
+25002	ナイトシティー・アヴァンチュール	-	5	7	9	-
+25003	DEATH†ZIGOQ ～怒りの高速爆走野郎～	-	7	10	12	12
+25004	Initiation	3	7	10	12	-
+25005	ChaserXX	-	6	9	11	12
+25006	純真可憐デザイア	1	4	8	10	11
+25007	EMERALDAS	3	7	11	12	-
+25008	ANCHOR	-	7	10	12	-
+25009	AA -rebuild-	-	7	10	12	-
+25010	I Love You	-	5	9	11	-
+25011	バスルーム ロマンス	-	5	8	10	-
+25012	COSMIC☆WONDER☆REVOLUTION	-	4	7	9	-
+25013	ACCELERATE	-	6	8	10	-
+25014	Expanded !!	-	4	8	10	-
+25015	Life Is A Game ft.DD"ナカタ"Metal	-	6	10	12	-
+25016	Back Spin Sweeper	-	6	9	11	-
+25017	シムルグの目醒め	-	7	10	12	-
+25018	Abraxas	-	5	9	11	-
+25019	Papilio ulysses	-	7	10	12	-
+25020	Mira	-	5	9	11	-
+25021	東京神話	2	6	9	12	12
+25022	Beast mode	-	6	9	11	-
+25023	FIRE BALL	-	5	9	11	-
+25024	草原の王女-軌跡を辿って-	-	3	7	10	-
+25025	VOX RUSH	-	7	10	12	-
+25026	O/D*20	-	6	8	10	12
+25027	255	-	6	9	12	-
+25028	Battleground	-	6	9	11	-
+25029	Boomy and The Boost	2	6	9	12	-
+25030	ANAGMA	-	5	8	10	-
+25031	ハイ*ビスカス ft. Kanae Asaba	-	4	7	10	-
+25032	Alpheratz	-	2	5	9	-
+25033	Amor De Verão	-	4	8	11	-
+25034	LUV DRIVE	-	5	7	10	-
+25035	HAT TRICK	-	5	8	10	-
+25036	Break Stasis	-	6	9	10	-
+25037	エディブルフラワーの独白	-	4	8	10	-
+25038	Exhaust Hype	-	5	9	11	-
+25039	FREEDOM	-	5	8	11	-
+25040	Slipstream	-	5	9	12	-
+25041	Best of Me	-	4	8	10	-
+25042	Around the Future	-	6	9	11	-
+25043	FUTURE is Dead	-	5	8	11	-
+25044	Acidiva 303	-	4	7	10	-
+25045	1001 -ESCAPE-	-	5	8	10	-
+25046	共犯ヘヴンズコード	-	3	7	10	-
+25047	うさ☆かめ 大戦争！	-	6	8	11	-
+25048	Nothing but Theory	-	5	8	11	12
+25049	Illusionary Waterlily	-	6	10	12	-
+25050	n'pa pa BBQ	-	4	8	11	-
+25051	Temple of Anubis	-	5	8	11	-
+25052	Persephone	-	6	9	12	-
+25053	No Limit 2 dAnce feat. 大山愛未	-	5	8	11	-
+25054	Hella Deep	-	4	7	10	-
+25055	Static State	-	6	9	10	-
+25056	Get Up! feat. Kanae Asaba	-	3	7	9	-
+25057	Midnight Lady	-	4	6	9	-
+25058	The Chase	-	5	10	12	-
+25059	UMMU	2	6	10	11	-
+25060	Rise Circuit	-	5	9	11	-
+25061	Chemical Cookie	-	5	8	10	-
+25062	Son, not gabba now	-	4	8	10	-
+25063	Xperanza	3	7	10	12	-
+25064	2 Player	-	6	9	10	-
+25065	I'm Coming (2017 Version)	-	3	7	9	-
+25066	LIGHTS ft. EVO+	-	4	7	10	-
+25067	SUNLiGHT (IIDX Mix)	-	7	9	11	-
+25068	ラストセンチュリーメランコリック	-	5	8	10	-
+25069	Eine Haube ～聖地の果てにあるもの～	-	5	8	11	-
+25070	Only for now	-	4	8	10	11
+25071	From Time To Time	-	4	9	10	-
+25072	SPEED	-	5	8	10	-
+25073	Fervidex	-	5	9	11	-
+25074	DEADHEAT	-	6	10	12	-
+25075	Arca	-	5	9	12	-
+25076	SPEED DEMON	-	5	8	10	-
+25077	The Revolution (VIP Mix)	-	4	7	10	-
+25078	命の標本	-	4	8	11	-
+25079	Be a Hero!	-	4	9	11	-
+25080	Raspberry Railgun	-	7	10	12	-
+25081	STARLIGHT JUNCTION	-	4	8	10	11
+25082	Usual Days-remix	-	5	9	11	-
+25083	Antigravity	-	6	10	12	-
+25084	バ→ビ→ブ→Bomb!	-	5	9	11	-
+25085	NITROUS CANNON	-	7	10	12	-
+25086	パラドキシカル・タイムリープトライアル(Short Ver.)	-	5	9	11	-
+25087	SHOX	-	5	8	10	-
+25088	encounter	-	5	9	12	-
+25089	HYPE THE CORE	-	6	10	11	-
+25090	City Never Sleeps (IIDX Edition)	-	7	9	11	-
+25091	Rampage	-	6	10	12	-
+25092	REVOLVER	-	5	8	11	12
+25093	DropZ-Line-	-	7	10	12	-
+25094	Sleepless days	-	4	6	9	-
+25095	MAXIVCORD	-	5	9	11	-
+25096	Let's Bounce !!	-	4	7	10	-
+26000	THE DAY OF JUBILATIONS	-	7	10	12	-
+26001	KILL EACH OTHER	-	7	10	12	-
+26002	Won(*3*)Chu KissMe!	1	5	8	10	-
+26003	抱きしめてモナムール	-	5	10	12	-
+26004	UNDERWORLD HOLOGRAPHY	-	5	9	11	-
+26005	R∞tAge	3	5	8	11	-
+26006	HOT LIMIT	2	5	9	10	-
+26007	X-DEN	-	8	11	12	-
+26009	HEISEI	2	6	10	11	-
+26010	Drastic Dramatic	-	7	10	12	-
+26011	GENE	-	7	10	12	-
+26012	Painful Fate	-	7	10	12	-
+26013	SIGMA	-	5	8	10	-
+26014	Digital Skipper	-	6	8	10	-
+26015	Lift Us High	-	5	8	10	-
+26016	CODE:0	-	5	9	11	12
+26017	BLO§OM	-	5	8	10	-
+26018	ZENDEGI DANCE	-	6	9	11	-
+26019	Psycho Sheep Riddim	-	3	7	9	11
+26020	COSMIC CYBER	-	5	9	11	-
+26021	A Tale Hidden In The Abyss	-	6	9	11	-
+26022	サクラあっぱれーしょん	1	3	7	9	-
+26023	Garuda	-	5	9	11	-
+26024	グラナダの風	-	5	8	10	-
+26025	Unbelief	-	5	10	12	-
+26026	CoMAAAAAAA	-	6	9	10	-
+26027	深愛のリグレット	-	4	7	10	-
+26028	Wonderland	-	5	9	11	-
+26029	Mächö Mönky	-	6	10	12	-
+26030	Glory	-	4	7	9	-
+26031	夏の匂い。キミの残像。 ft. Kanae Asaba	-	4	8	10	-
+26032	AGAiN	-	5	8	10	-
+26033	Catch Our Fire!	-	6	10	12	-
+26034	dAuntl3ss	-	6	10	12	-
+26035	Starry Night	-	4	7	10	-
+26036	Wing of Hearts	-	5	8	10	-
+26037	Carmina	3	6	10	12	-
+26038	L.F.O	-	5	9	12	-
+26039	The Rebellion of Sequencer	-	7	10	12	-
+26040	泰東ノ翠霞	-	3	6	11	-
+26041	花冠 feat.Aikapin	-	6	9	11	-
+26042	セカンドピアス	-	3	6	9	-
+26043	Dr. Chemical & Killing Machine	-	5	9	12	-
+26044	ハードベース・フェスタ	-	6	9	11	-
+26045	U.S.A.	3	6	9	11	-
+26046	IDC feat.REVERBEE (Mo'Cuts Ver)	-	7	9	11	-
+26047	Red. by Jack Trance	-	7	10	12	-
+26048	Twilight Warp	-	4	7	9	-
+26049	ROCK女 feat. 大山愛未, Ken	-	7	9	11	-
+26050	Yum Yum Jelly	-	5	9	11	-
+26051	LADYBIRD	-	7	9	11	-
+26052	Cranberry City ft. Luschel	-	5	8	10	-
+26053	& Intelligence	-	5	9	11	-
+26054	Hurry Hurry	-	4	6	9	-
+26055	Ember Lights	-	5	9	11	-
+26057	Particle Arts	-	4	8	10	-
+26058	Urban Constellations	-	4	8	11	-
+26059	ONIGOROSHI	-	6	10	12	-
+26060	爆ゼニ☆がってんワーカー	-	6	9	11	-
+26061	Re:Story	-	3	7	10	-
+26062	The Sealer ～ア・ミリアとミリアの民～	-	4	7	10	-
+26063	The Best of Both Worlds	-	3	8	10	-
+26064	GIGA THRASH	-	6	9	11	-
+26065	Angels & Demons	-	5	8	10	-
+26066	ミストレス・アンに花束を	-	3	6	8	-
+26067	SPEED ROCKER	-	4	9	10	-
+26068	IDOL syndrome.	-	4	7	10	11
+26069	OVER TIME	-	3	5	8	10
+26070	Xlø	-	7	10	12	-
+26071	Let me be your cure	-	5	7	10	-
+26072	Level One	-	6	10	12	-
+26074	Next Tales 2 Oath (IIDX 20th Anniv "Ring" Theme)	-	5	9	11	-
+26075	Serious?	-	3	7	10	-
+26076	龍王の霊廟(Mausoleum Of The Primal Dragon)	-	6	10	11	12
+26077	Wolf 1061	-	4	8	11	-
+26078	金野火織の金色提言	-	6	10	12	-
+26079	EVANESCENT	-	6	10	12	-
+26080	LOST TECHNOLOGIE	-	5	9	12	-
+26081	XENON II ～TOMOYUKIの野望～	-	6	9	11	-
+26082	REPLAY	-	4	8	10	-
+26083	DRUNK MONKY	-	7	10	12	-
+26084	Playing With Fire	-	6	9	11	-
+26085	Lethal Weapon	-	6	9	12	-
+26086	GO OVER WITH GLARE -ROOTAGE 26-	-	6	10	12	-
+26087	お菓子の王国	-	7	10	12	12
+26088	50th Memorial Songs -Beginning Story-	2	4	8	10	-
+26089	50th Memorial Songs -二人の時 ～under the cherry blossoms～-	3	5	8	10	-
+26090	50th Memorial Songs -Flagship medley-	2	5	8	10	-
+26091	50th Memorial Songs -The BEMANI History-	3	5	9	11	-
+26092	Night! Night! Night!	-	6	9	11	-
+26093	ruin of opals	-	6	10	12	-
+26094	Technicolour Dreams	-	5	8	10	-
+26095	Carry Me Away	3	7	9	12	-
+26096	ROZA DE ANDALUCIA	-	6	9	11	-
+26097	ToyCube Pf.(RX-Ver.S.P.L.)	-	4	7	9	11
+26098	Sidechained Threats	-	6	8	10	-
+26099	Necroxis Girl	-	6	9	11	-
+26101	Geirskögul	-	5	8	10	-
+26102	Please Welcome Mr.C	-	6	9	12	-
+26104	HARD BRAIN	-	6	9	12	-
+26106	Visterhv	-	6	10	12	-
+26107	Trill auf G	-	6	10	12	-
+26108	voltississimo	-	6	10	12	-
+26109	toy boxer	-	4	8	10	-
+26110	最小三倍完全数	-	5	9	12	-
+26111	Six String Proof	-	5	9	11	-
+26112	おーまい！らぶりー！すうぃーてぃ！だーりん！	-	5	9	11	-
+26113	Afterimage d'automne	-	6	9	11	-
+26114	BLACK JACKAL	-	5	8	10	-
+26115	ミッドナイト☆WAR	-	5	8	11	-
+27000	THE BRAVE MUST DIE	-	6	10	12	-
+27001	UNITE THE HEART	-	7	10	11	-
+27002	PHASE SHIFT MANEUVER	-	6	9	11	-
+27003	がっつり陰キャ!? 怪盗いいんちょの億劫^^;	-	7	10	12	-
+27004	Dans la nuit de l'éternité	-	7	10	12	-
+27005	VALKYRIAS -英雄誕生-	2	6	9	11	-
+27006	EXCITE	2	4	7	10	-
+27007	LIGHTNING STRIKES	2	5	9	12	12
+27008	EROICA	-	7	10	12	-
+27009	TECHNO Style Essentials	-	6	9	12	-
+27010	27th style	-	5	9	11	12
+27011	rough percussionythm	-	6	9	11	-
+27012	LASER CRUSTER (IGNITE REMIX)	-	4	8	12	-
+27013	錬成人間トリコロイダー	-	5	8	11	-
+27014	Like+it!	-	6	9	11	12
+27015	Hold My Hand	-	5	8	10	-
+27016	STOIC HYPOTHESIS	-	6	9	11	-
+27017	Fly Above (Vicissitude Remix)	-	4	7	10	-
+27018	華麗なる大犬円舞曲	-	7	10	12	-
+27019	AKASHIC BREAK	-	6	10	12	-
+27020	Everlasting Message	-	7	10	12	-
+27021	Queen Kaguya	-	6	9	11	-
+27022	Do What You Want	-	4	7	10	-
+27023	Lost Souls	-	4	9	11	12
+27024	曼荼羅恋々	-	6	9	11	-
+27025	OUTER PLANETS	-	4	7	10	-
+27026	魅惑のYUMMYスイーツ	-	5	9	12	-
+27029	Nasty Techniques	-	5	9	11	-
+27030	Rave Patroller	-	7	10	12	-
+27031	Sugar Drippin'	-	4	7	9	-
+27032	セピアの軌跡 ft. 天宮みや(少女フラクタル)	2	4	7	10	12
+27033	Bow shock!!	-	4	9	11	12
+27034	T-REX vs Velociraptor (In the Far east euphoria)	-	7	9	12	-
+27035	Artist	-	7	10	12	-
+27036	GHOST	-	5	8	11	-
+27037	The Sky of Sadness	-	4	8	10	-
+27038	令和(1991RAVE REMIX)	2	4	8	11	-
+27039	Lords Of The Roundtable	-	6	10	12	-
+27041	Rainstorm	-	5	8	10	-
+27042	Drop It	-	6	9	11	-
+27043	Primitive Vibes	3	6	10	12	-
+27044	Double Dribble	-	6	10	12	-
+27045	Virus Funk	-	4	7	10	-
+27046	Override	-	5	8	11	12
+27047	Voo Doo Bamboleo	-	5	8	10	-
+27048	Infinity Mirror	-	5	8	10	-
+27049	灼熱Beach Side Bunny (Masayoshi Iimori Remix)	-	4	7	10	-
+27050	Volcanic Dragon	-	6	8	11	-
+27051	Ska-sh All Neurons!!	-	4	7	10	-
+27052	SCREW // owo // SCREW	-	6	9	12	-
+27053	Calvados Queen	-	5	8	10	-
+27054	深淵に捧ぐレクイエム	-	5	9	12	-
+27055	NRG STAR '86 feat. 大山愛未	-	5	8	10	-
+27056	Matt Silver	-	6	9	12	-
+27058	Moving on	-	5	8	11	-
+27059	TRIUMPH	-	6	9	12	-
+27060	BEAT PRISONER	-	6	9	12	-
+27061	Change Yourself	-	5	9	11	-
+27062	NEWALONE	-	4	7	9	-
+27063	beatAffection	-	5	8	10	-
+27064	Friction[!]Function	-	6	9	12	-
+27065	GIGA VIOLATE	-	6	8	11	-
+27066	Crank It	-	4	7	9	-
+27067	Duration	-	3	6	9	-
+27068	Rave lithosphere	-	5	8	11	-
+27069	S!ck (Nhato Remix)	-	6	9	11	-
+27070	Beautiful Harmony (IIDX Mix)	-	5	8	10	-
+27071	俺ら東京さ行ぐだ	1	4	7	10	12
+27072	POP TEAM EPIC(kors k Remix)	1	3	7	9	-
+27073	ガヴリールドロップキック	3	5	9	11	-
+27074	fairy cocktail	-	3	6	8	-
+27075	Mel	-	4	7	9	10
+27076	Hyper Drive feat. ぷにぷに電機	-	3	7	9	-
+27077	Theory	-	5	8	11	-
+27078	Level 2	-	6	9	12	-
+27079	And-RoiD	-	4	7	9	-
+27080	ランカーキラーガール	-	6	9	11	-
+27081	VIBRΛ	-	5	7	10	-
+27082	Ohayo!	-	5	8	11	-
+27083	Silly Love	1	4	8	10	-
+27084	Inferno of Fomalhaut	-	5	10	12	-
+27085	イリィガル・べィス・メディスン	-	5	9	12	-
+27087	開きたまえ！Next stAge！	-	5	9	11	-
+27088	ピアノ協奏曲第1番”蠍火” (BlackY Remix)	-	5	9	12	-
+27089	Horizons of Promise	-	4	7	10	-
+27090	Shiva	-	4	8	11	-
+27092	Backyard Stars	-	6	9	10	-
+27094	THE F∀UST	-	7	10	12	-
+27095	Smashing Wedge	-	5	10	12	-
+27096	Advent Infamous	-	5	8	11	-
+27097	Sellout	-	3	6	10	-
+27098	Punching Down (IIDX Mix)	-	4	7	9	-
+27100	If	-	5	8	10	12
+27101	take me higher	-	4	7	10	-
+27102	Vinculum stellarum	-	5	10	12	-
+27103	眠りの国のステラ	-	6	9	11	-
+27105	ラブキラ☆スプラッシュ	-	5	8	10	-
+27106	Sparkle Smilin'	-	4	8	11	-
+27107	狂水一華	-	5	9	11	-
+27108	Into The Madness	-	5	8	11	-
+27109	ORCA	-	7	10	12	-
+27110	バッドエンド・シンドローム	-	5	8	11	-
+27111	BEMANI PRO LEAGUE Theme(Old Version)	-	6	8	10	-
+27112	Forgetting Machine	-	5	8	10	-
+27113	シャムシールの舞	-	4	8	11	-
+27114	Megalara Garuda	-	7	10	12	-
+27116	Ypsilon	-	6	9	11	12
+27117	Jetcoaster Windy	-	4	7	10	-
+27203	Clione (Ryu☆ Remix)	-	5	8	10	-
+28000	涙のテ・エストラーニョ・ムーチョ	-	6	9	11	-
+28001	Romanticが止まらない	2	5	8	11	-
+28002	THE PEERLESS UNDER HEAVEN	-	6	10	12	-
+28004	無意識のフィロソフィア	-	5	9	11	-
+28005	∀	3	7	10	12	-
+28006	紅蓮華	1	3	6	9	-
+28007	LOCUS OF THE TRAVEL	-	6	10	12	-
+28008	ディスコルディア	-	7	10	12	-
+28009	of the first magnitude	-	5	9	11	-
+28010	X-ray binary	-	5	9	11	-
+28011	-65℃	-	7	10	12	-
+28012	Breakin' Rules	-	6	9	11	-
+28013	Hands Up feat. kradness BEMANI Sound Team "Sota Fujimori" Remix	-	6	9	10	-
+28014	Euphoric Lagoon	-	5	8	10	-
+28015	儚き恋の華	-	5	9	11	-
+28016	水鏡の異界	-	5	9	12	-
+28017	Pārvatī	-	5	9	12	-
+28018	S-Bahn	-	4	7	9	-
+28019	COSMIC RAY	-	7	10	12	-
+28020	乱膳の舞姫	-	6	9	11	-
+28021	Vitrum	-	6	9	12	-
+28022	霧幻メモリア	-	5	7	10	-
+28023	Winner's Proof ft. KANASA from bless4	1	4	7	10	-
+28024	Sinus Iridum	-	7	11	12	-
+28025	Empire of Fury	-	7	10	12	-
+28026	Rub-a Dub-a	-	5	8	10	-
+28027	Tiempo Loco	-	5	10	12	-
+28028	水無月の雫 ft. 小林まな	-	6	8	10	-
+28029	Rubrum Piano	-	5	9	11	-
+28030	閠槞彁の願い	-	6	10	12	-
+28031	Midnight Drive	-	3	8	10	-
+28032	Lovely Howdy Cowboy!!	-	6	9	11	-
+28033	Frisk And Squeak	-	4	8	10	-
+28034	Party Starter	-	4	8	10	-
+28035	MEGAERA	-	7	10	12	-
+28036	Here We Are	2	5	8	10	-
+28037	IIDX RED Ending (Ryu☆Remix)	-	4	7	9	-
+28038	The Wind of China Express(The 4th Mashup)	-	5	8	10	-
+28039	WAKE UP NOW	-	5	7	9	-
+28040	As You Want	-	4	8	10	-
+28041	Rowdy	-	5	8	10	-
+28042	Swarm Of Scarabs	-	6	8	11	-
+28043	魔法のかくれんぼ	-	5	9	12	-
+28044	Don't Stop The Music feat. Kanae Asaba	-	3	6	9	-
+28045	Dawn Saga	-	5	9	11	-
+28046	AMRITA -不滅ノ花-	-	4	8	11	-
+28047	Farewell to Marrakech	-	5	8	11	-
+28048	Danza Aestas	-	5	8	11	-
+28049	Ritual of Anubis	-	6	9	11	-
+28050	POLꞰAMAИIA	2	5	9	11	-
+28051	ASIAN VIRTUAL REALITIES (MELTING TOGETHER IN DAZZLING DARKNESS)	-	5	9	12	-
+28052	犬に雨傘	-	4	7	9	-
+28053	innocent revolver	-	6	10	12	-
+28054	So Punky	-	5	8	10	-
+28055	Viridian	-	5	10	12	-
+28056	Jungle Eater	-	5	9	11	-
+28057	LAST DAY	-	6	9	11	-
+28058	BIGソムタム	3	7	9	12	-
+28059	Burning Flame	-	6	9	11	12
+28060	GIGA RAID	-	5	9	11	-
+28061	rommmo	-	6	9	12	-
+28062	Para siempre	-	5	8	11	-
+28063	Brahma	-	6	8	11	-
+28064	Ah Hah Yeah	-	4	8	11	-
+28065	apo:llioth	-	5	9	11	-
+28066	Explorer feat. ぷにぷに電機	-	4	7	10	11
+28067	Overslept	-	6	9	11	-
+28068	Mars beach	-	3	7	10	-
+28069	Tell me what you wish feat.らっぷびと	-	5	8	11	-
+28070	Ocean Blue feat. Luschel	-	4	7	10	-
+28071	Rosa azuL	-	5	9	11	-
+28072	When I Met U	-	4	7	10	-
+28073	BLACK or WHITE?	3	6	10	12	-
+28074	新宝島	3	5	7	10	12
+28075	TOMORROW	2	4	7	10	-
+28076	Zenith	-	5	9	11	-
+28077	HIGH VOLTAGE	-	4	7	10	-
+28078	3!dolon Forc3	-	6	9	12	-
+28079	Chewingood!!!	1	4	7	10	-
+28080	Crazy Jackpot	-	5	9	11	-
+28081	二人ノ廃城幽踊宴	-	7	10	12	-
+28082	Sugarplum	-	5	8	10	-
+28083	That Feeling	-	4	8	10	-
+28084	Ignis†Iræ	-	6	10	12	-
+28085	OTOKOZAKA	-	5	9	11	-
+28086	Neo Heritage	-	5	9	11	-
+28087	SOLID STATE SQUAD -RISEN RELIC REMIX-	-	6	10	12	-
+28088	ABSOLUTE (kors k Remix)	-	5	8	11	-
+28089	smooooch・∀・ (Snail's House Remix)	-	5	8	10	-
+28090	バッド・スイーツ、バッド・ドリーム	-	5	9	12	-
+28091	世界の果てに約束の凱歌を -ReUnion-	-	6	9	12	-
+28092	ここからよろしく大作戦143	1	4	8	10	11
+28093	伐折羅-vajra-	-	6	10	12	-
+28094	CONNECT-	-	5	9	11	-
+28095	Scandal	-	4	9	11	-
+28096	Level 3	-	6	10	12	-
+28098	BEMANI PRO LEAGUE Theme	-	4	7	9	-
+28099	冥 (かめりあ's "甦" Remix) 	-	7	11	12	-
+28100	Fire Beat	-	6	10	12	-
+28101	Playball	-	4	6	8	-
+28102	DENIM	-	4	9	10	-
+28109	MA・TSU・RI	-	5	9	11	-
+28110	MOVE! (We Keep It Movin')	-	4	7	10	-
+28111	LIKE A VAMPIRE	-	6	9	11	-
+28112	スーパー戦湯ババンバーン	-	6	10	12	-
+28113	Globe Glitter	-	5	8	11	-
+28114	DUAL STRIKER	-	6	10	12	-
+28117	Rejection Girl	-	5	9	11	-
+28204	Amabie	-	4	8	10	-
+28207	Remain	-	6	10	12	-
+28210	Space Dog	-	2	6	9	-
+29000	LIVE DRIVING!! feat. 花たん	-	7	10	12	-
+29001	SOLID WYVERN	-	6	9	11	12
+29002	GRAVITON	-	6	10	12	-
+29003	PLASMA SOUL NIGHT feat. Nana Takahashi / 709sec.	2	6	10	12	-
+29005	HEARTACHE	-	3	7	10	-
+29006	Onyx	-	5	8	11	-
+29007	ALTERNATOR	-	7	10	12	-
+29008	ANEMONE	1	4	7	10	-
+29009	Tail Lights	-	5	9	11	-
+29010	Binary Black Hole	-	6	10	12	-
+29011	Divine Heaven	-	5	9	11	-
+29012	ハイテックトキオ	-	6	9	11	12
+29013	AMICABLE	-	5	8	10	-
+29014	ILAYZA	-	6	9	11	-
+29015	ウツシミウツシ	-	6	9	11	-
+29016	SPARK IN THE NIGHT	-	4	8	10	-
+29017	ピアノ独奏無言歌 "灰燼"	-	6	10	12	-
+29018	DISPARATE	-	5	8	11	-
+29019	Pout	-	6	9	11	-
+29020	DREAM OF SPACE UFO ABDUCTION	-	5	8	11	-
+29021	Lawes's Parotia	-	4	8	11	-
+29022	PIRATES BLADE	-	5	8	10	-
+29023	Legendary Treasures	-	5	8	11	-
+29024	Prohibited Props	-	5	8	10	-
+29025	Purple Perplex	-	7	10	12	-
+29026	kors k's How to make OTOGE CORE	-	5	9	11	-
+29027	2 Beasts Unchained	-	7	10	12	-
+29028	愛しくてラヴィンユー ft. マナ	-	4	7	10	-
+29029	Fegrix	-	6	10	12	-
+29030	GiGaGaHell	-	7	10	12	-
+29031	Skreaming for Salvation	-	6	10	12	-
+29032	Votania Beat	-	5	8	10	-
+29033	Xyndrome	-	6	9	11	-
+29035	Wonderful Escape	-	5	7	10	-
+29036	FINALLY BLAZE	-	5	9	11	-
+29037	Victory Of Ravers	-	6	9	11	-
+29038	青の洞窟	-	4	9	11	-
+29039	Banger Banger Banger Banger	-	5	9	11	-
+29040	Get set, Go! feat.Kanae Asaba	-	4	7	10	-
+29041	天邪鬼	2	5	9	12	-
+29042	RAGE feat.H14 of LEONAIR	3	6	10	12	-
+29043	Fantastic Merry-Go-Round	-	4	7	9	-
+29044	Blue Bird feat. Kanae Asaba	-	4	6	8	-
+29045	禊	-	6	10	12	-
+29046	Ariah	-	4	7	10	-
+29047	Nocturnal 2097	-	5	9	11	-
+29049	Flying Castle	-	6	10	12	-
+29050	WHA	-	7	10	12	-
+29051	N.O.	-	5	8	10	-
+29052	烽火連天の刃	-	6	10	12	12
+29053	オールトの雲	-	6	9	11	-
+29054	Smalt #28598F	-	6	10	12	-
+29055	Ergosphere	-	5	9	11	-
+29056	EMOTiON TRiPPER	-	5	8	10	-
+29057	808monkey	-	4	7	9	-
+29058	10000 MILES AWAY	-	5	9	11	-
+29060	口カラ凸ゲキ	-	5	8	10	-
+29061	n/a	-	7	10	12	-
+29062	Angel's Ladder	-	6	10	12	-
+29063	Ventriloquist	-	4	8	11	-
+29064	Non Stop Rock	-	4	8	10	-
+29065	ナイトフィクション	-	4	8	10	-
+29066	hard-wired	-	7	10	12	-
+29068	雪上断火	-	6	10	12	-
+29069	No Day But Today!	2	4	7	10	-
+29070	Arkadia	-	5	9	12	-
+29071	踊	1	3	6	9	10
+29072	デモーニッシュ	1	5	8	11	12
+29074	アクマフカ	-	5	8	10	-
+29075	シル・ヴ・プレジデント	2	4	7	10	11
+29076	Don't believe the hype	-	6	10	12	-
+29077	P.O.W.E.R.	-	5	8	10	-
+29078	ABSOLUTE EVIL	1	6	10	12	-
+29079	月とミルク	-	5	8	11	-
+29080	めでてえ	-	5	8	10	-
+29081	怪物	1	4	6	10	11
+29082	ミュージック・アワー	3	6	9	11	-
+29083	ぐだふわエブリデー	2	5	8	11	-
+29084	Silver Bullet	-	6	10	12	-
+29085	オドループ	3	5	7	10	11
+29086	《GRANDMASTER》	-	5	9	11	-
+29087	Game Changers	-	4	8	11	-
+29088	Hat Surprise	-	4	8	11	-
+29089	TOMAHAWK	-	6	10	12	-
+29090	One for All	-	5	9	12	-
+29091	Brave Spirits	-	4	8	10	-
+29092	Triple Cross	3	6	10	12	-
+29093	Aftermath	-	6	10	12	-
+29094	逆月	-	7	10	12	-
+29095	Souhait bleu	-	5	9	11	-
+29096	Harmonia	-	4	7	10	-
+29097	Stepper	-	4	8	10	-
+29098	Push on Beats!～音ゲの国のeX-ストリーマー～	-	6	9	12	-
+29099	黒紅掬い	-	4	7	9	-
+29100	Emera	-	5	8	11	-
+29101	VR - Virtual Reality (prod.by Snail's House)	1	3	6	9	10
+29102	グッバイ宣言	3	5	8	11	12
+29103	あいつら全員同窓会	2	5	7	10	-
+29214	TSAR BOMBA	-	6	10	12	-
+29217	concon	-	5	8	10	12
+29219	Gimme a Big Beat	-	5	8	10	-
+29221	ロミとロボの宇宙飛行	-	5	8	10	-
+29910	starmine(kors k Remix)	-	4	7	9	-
+30000	B.O.D.Y.	-	6	10	12	-
+30001	湘南ロンリーMIDNIGHT RAIN	-	5	8	10	-
+30002	LOUDER ROLLING THUNDER	-	6	10	12	-
+30003	mathematical good-bye	-	5	8	10	-
+30004	Shadow World	-	4	8	11	-
+30005	TECHNOPHOBIA	-	5	8	12	-
+30006	[ ]DENTITY	-	6	10	12	-
+30007	VØID	-	7	10	12	-
+30008	FLARE -炎舞- ft.Nana Takahashi	-	5	8	10	-
+30009	No Border	-	6	10	12	-
+30010	輪廻の鴉	-	5	9	11	-
+30011	STRAIGHT TO THE STARS	-	5	8	11	-
+30012	Xerulean	-	7	10	12	-
+30013	Peng-Ging Sky High!!	-	5	7	10	-
+30014	サヨナラ・ヘヴン-Celtic Chip Dance Mix-	-	4	8	10	-
+30015	VOLAQUAS	-	7	10	12	-
+30016	7 Colors	-	4	7	10	-
+30017	少年リップルズ	-	4	9	11	-
+30018	■□模様	-	5	8	10	-
+30019	LADS	-	5	7	10	-
+30020	Meissa	-	5	9	12	-
+30022	雨のちパノラマセカイ	-	4	7	9	-
+30024	Bad Encryption	-	7	10	12	-
+30025	Beyond Evolution	-	7	11	12	-
+30026	Programmed Genom	-	5	8	11	-
+30027	kors k's How to make OTOGE CORE 「LONG」	-	6	10	12	-
+30028	suspicions	-	6	10	12	-
+30029	≡+≡	3	7	10	11	-
+30030	Caldwell 99	-	6	9	11	12
+30031	月と夢の跡 ft. マナ	-	5	8	10	-
+30032	Ambush Ace	-	5	9	11	-
+30033	C-C-C-N-N-N	-	5	9	11	-
+30034	Peaktime Booster	-	7	10	12	-
+30035	Move UR Body	-	6	9	11	-
+30036	儚キ戀ノ幻想譚	3	8	10	12	-
+30037	Always We Trust In You	-	6	9	12	-
+30038	With You	-	4	8	11	-
+30039	3V0	-	5	9	11	-
+30040	Driver	-	5	7	9	-
+30041	きゅんです。	-	4	7	10	-
+30042	Ruler or Loser	-	5	8	11	-
+30043	Rewind Time	-	4	7	10	-
+30044	anthracene	-	6	9	12	-
+30045	wanna be a "BAD GIRL" feat. Nana Takahashi	-	3	6	9	10
+30046	Fading Stars	-	5	8	10	-
+30047	Seraph	-	5	9	11	-
+30048	Perfect Plan	-	6	9	11	-
+30049	Swing My Wonderland	-	5	9	11	-
+30050	DIAMOND JACKAL	-	5	9	11	-
+30051	Summerblue	2	5	8	10	-
+30052	Somnidiscotheque	-	6	11	12	-
+30053	罪過の聖堂	-	5	8	10	-
+30054	栄冠のカンパネラ	-	7	10	12	-
+30055	dica dica	-	5	10	12	-
+30056	Super Freak	-	5	9	12	-
+30057	楽園追放	-	5	8	10	-
+30058	#CMFLG	-	6	10	12	-
+30059	神のシナリオ	-	6	9	12	-
+30060	glacia	-	6	10	12	-
+30061	EXODUS SIGN	-	6	9	11	-
+30062	響花水月	-	6	9	11	-
+30063	GET UP AGAIN	-	6	8	10	-
+30064	チェイスチェイスジョーカーズのうた (オニスタイルリミックス)	-	5	9	11	-
+30065	BIGWAVERS	-	6	9	12	-
+30066	VOLCANIC BIGBEAT	-	6	9	11	-
+30067	Dreaming Dream	-	4	7	10	-
+30068	THE TIME MACHINE	-	6	9	11	-
+30069	ONE AND ONLY	-	6	9	12	-
+30070	CUE CUE RESCUE	3	5	8	10	12
+30072	あるビー！ feat.ころねぽち	-	4	9	11	-
+30073	真夜中のバベル	-	4	7	9	-
+30074	Luna Plena	-	5	8	10	-
+30075	Sunny Day Vibes	-	5	8	10	-
+30076	The Clown of 24stairs	-	6	10	12	-
+30077	ZEИITH	-	6	9	11	-
+30078	ぞうしょく！？マイデンティティ	-	6	10	12	-
+30079	Level 4	-	6	10	12	-
+30080	Chaotoxin	-	5	9	12	-
+30081	昏き甲鉄のヴェルガ	-	4	7	10	-
+30082	おとせサンダー	1	4	7	10	-
+30083	いつかオトナになれるといいね。	3	6	9	11	-
+30084	生きるよすが	2	4	7	10	-
+30085	EZ DO DANCE	2	4	7	9	-
+30086	《ORDERBREAKER》	-	6	9	11	-
+30087	OVER VOLTAGE	-	6	9	11	-
+30088	Hat Surprise (Season 2)	-	5	9	12	-
+30089	Ōu Legends	-	6	10	12	-
+30090	Red Soul	-	6	9	11	-
+30091	STAR BEAT	-	4	8	10	-
+30092	Get On Your Feet	-	5	9	11	-
+30093	Next Level	-	5	8	10	-
+30094	24h Endurance Race	-	5	10	12	-
+30095	I	-	6	10	12	-
+30096	RINИE	-	5	10	12	-
+30097	パーフェクトイーター	-	5	9	11	-
+30098	恋愛＝精度×認識力	-	7	10	12	-
+30099	AWA AWA	-	4	7	10	-
+30100	ちょえちょえまぎか	-	6	10	11	12
+30101	神っぽいな	2	4	8	10	12
+30102	KING	2	4	9	11	12
+30104	新時代	2	4	7	10	-
+30105	マツケンサンバII	3	6	9	11	-
+30106	CODE -CRiMSON-	-	6	9	11	-
+30107	MAX 360	-	6	10	12	-
+30108	異心前進♪ぴょんぴょんぴょん	-	5	8	10	-
+30109	惑星☆ロリポップ	-	4	8	11	-
+30111	Shamshir	-	5	8	10	-
+30114	Stylus	-	6	9	11	-
+30223	Ha･lle･lu･jah	-	4	7	9	10
+30225	Stleq	-	5	9	11	-
+30226	DO-IT-AMA-SITE!!!	-	5	9	11	-
+30227	tricky trick	-	4	7	10	-
+30228	Chocolate Planet	-	4	8	10	11
+30229	ALL OK!!	-	6	10	12	-
+30230	Vector	-	5	9	10	-
+31000	JUSTICE/GUILTY feat. Nana Takahashi & 709sec.	-	7	10	12	-
+31001	CADENZA	-	7	10	12	-
+31003	The Last Apocalypse	-	6	10	12	-
+31004	Iris	2	4	7	10	-
+31005	電子になりたい	-	5	8	10	-
+31006	Riff//rain	1	4	7	9	-
+31007	Vulnerability	-	7	10	12	-
+31008	Time Distortion pt.2(IIDX Edit)	-	6	9	11	-
+31009	frequent	-	5	10	12	-
+31010	Cult Invitation	-	6	10	12	-
+31011	Chemical Colours	-	5	9	11	-
+31012	Speculation	-	5	9	11	-
+31013	めうめうぺったんたん！！ (ZAQUVA Remix)	-	4	9	11	-
+31014	WaterCube Pf.(RX-Ver.S.P.L.)	-	3	7	10	-
+31015	Sword of Vengeance	-	7	10	12	-
+31016	Psychedelic Intelligence	-	6	9	11	-
+31017	ポラリスノウタ	1	4	8	10	-
+31018	終焔のClaudia	-	8	10	12	-
+31019	Get Higher	-	6	9	11	-
+31020	Amethyst	-	6	9	11	-
+31021	アイドル	1	4	7	10	11
+31022	傷つけど、愛してる。	2	5	8	10	-
+31023	ちゅ、多様性。	1	3	6	9	10
+31024	酔いどれ知らず	1	4	7	10	-
+31025	寝起きヤシの木	2	5	9	11	-
+31026	Mukade	-	6	9	11	-
+31027	Glitch N Ride	-	7	10	12	-
+31028	See You Again	-	5	9	11	-
+31029	winkle 2 winkle	-	6	9	11	-
+31030	灼熱Beach Side Bunny (かめりあ's "Summertime D'n'B" Remix)	-	5	9	12	-
+31031	果たせぬ約束 ft. 小林マナ	-	6	9	11	-
+31032	COUNTING SHEEP ft. Kanae Asaba	-	4	7	10	-
+31033	Tripping Jumping	-	4	8	10	-
+31034	Out of Control	-	6	10	12	-
+31035	Echoes of Sunfall	-	5	8	11	-
+31036	今宵、ロマンス横丁。	-	6	10	12	-
+31037	Stereo Beasts	-	6	10	12	-
+31038	Bitter & Lucky	-	4	7	10	-
+31039	Dahlia	-	6	10	12	-
+31040	Jumper	-	4	7	10	-
+31041	アタシ完全絶対正義ちゃん！	-	5	8	10	-
+31042	シンデレラ	3	5	8	10	-
+31043	摩天楼	-	4	8	12	-
+31044	惑星鉄道	-	7	11	12	-
+31045	センチメンタル・サマー	-	3	6	9	-
+31046	Demon March	-	6	10	12	-
+31047	Aeterna	-	4	8	10	-
+31048	Deep Sea Mystery	-	6	8	10	-
+31049	Submerge Serenade	-	5	9	11	-
+31050	INHERITANCE	-	6	9	11	12
+31051	MAXIMUM CHEAT GIRL	-	6	10	12	-
+31052	Resonant	-	5	10	12	-
+31053	れとりば！	-	4	7	9	-
+31054	Vermilion Carol	-	7	10	12	-
+31055	This Is Club Musik feat. 大久保紅葉	-	6	9	11	-
+31057	神様、つれない。	-	4	7	10	-
+31058	GLORIOUS HAMMER	-	6	9	11	-
+31059	Level 5	-	6	10	12	-
+31060	ZEROIN ON THE LIGHT	-	5	8	10	-
+31061	電腦都市	-	7	10	12	-
+31062	夢縁	-	6	10	11	-
+31063	Shapeshifter	-	6	9	10	-
+31064	Ghost Pulse	-	6	9	12	-
+31065	閉塞的フレーション	-	5	8	10	-
+31066	GAME ON	-	7	10	12	-
+31067	DAZZLE ATTACK	3	5	8	11	-
+31068	SOLAR ECLIPSE	-	7	10	12	-
+31069	TRIP THE DEEP	-	5	8	11	-
+31070	夏風邪デスコ	1	4	8	10	-
+31071	out of disk space	-	6	9	11	-
+31072	ないないルーティン	-	3	7	10	-
+31073	My Sweet Bird?	-	4	7	9	11
+31074	Too Late Snow	-	4	7	9	-
+31075	ACTØ	-	6	10	12	-
+31076	GloriosA	-	6	9	11	-
+31077	流桜ノ門	-	5	8	10	-
+31078	20XX	-	6	9	11	-
+31079	TITANIUM RIDERS	-	5	8	10	-
+31080	Just Gimme	-	5	8	11	-
+31081	Million Dollar	-	6	10	12	-
+31083	Xb10r	-	6	10	12	-
+31084	Monkey Business	-	5	8	11	-
+31085	Ambivalent Vermilia	-	7	10	12	-
+31086	《PL|RAYER》	-	5	9	12	-
+31087	電光	-	6	10	12	-
+31088	Hat Surprise (Season 3)	-	6	10	11	-
+31089	i-ii	-	6	9	11	-
+31090	Red Determination	-	5	8	11	-
+31091	Sirius	-	5	9	12	-
+31092	Hard Breaker	-	4	8	10	-
+31093	Get Wicked	-	5	8	10	-
+31097	デビルじゃないもん	2	5	8	10	-
+31098	可愛くてごめん	1	3	7	9	10
+31099	フォニイ	3	6	9	11	12
+31100	唱	1	3	7	9	-
+31101	勇者	2	5	8	11	-
+31102	マーシャル・マキシマイザー	3	5	9	11	-
+31103	雫	-	5	9	11	-
+31104	squall	-	6	9	11	-
+31105	BLAZING_LAZER	-	6	10	12	-
+31106	CODE:2	-	5	9	11	-
+31107	残像ニ繋ガレタ追憶ノHIDEAWAY	-	5	10	12	-
+31108	PILGRIM	-	5	9	11	-
+31109	NEEDLESS MY LOVE FOR YOU	-	5	8	10	-
+31110	Akatsuki	-	5	7	10	-
+31111	So What	-	3	6	9	-
+31112	ラビットホール	3	6	9	11	-
+31113	愛包ダンスホール	1	4	7	10	-
+31115	Seven Times Four	-	5	9	12	-
+31116	T.R.O.L.L.	-	6	9	11	-
+31117	The Onlyonez	-	5	9	12	-
+31118	リメンバーリメンバー	-	3	6	9	-
+31119	未完成ノ蒸氣驅動乙女	-	5	10	12	-
+31233	♡LOVE² シュガ→♡	-	5	8	10	-
+31234	MANA	-	5	9	11	-
+31235	LIMIT TOPPA REVOLUTION	-	5	9	11	-
+31236	情熱タンデムRUNAWAY	-	6	10	12	-
+31239	累乗のカルマ	-	5	8	10	-
+31240	FEEDING FRENZY	-	7	10	12	-
+31243	FAKE STYLE II	-	4	7	10	-
+31244	Dynasty	-	4	8	11	-
+31246	カラルの月	-	5	8	11	-
+31247	Ignited Night	-	6	9	11	-
+31248	ジオメトリック?ティーパーティー	-	7	10	12	-
+31249	Programmed Universe	-	4	7	10	-
+31250	CyberConnect	-	4	7	10	-
+31251	Cosy Catastrophe	-	5	10	12	-
+31252	Note Highway ft. KANASA from bless4	-	5	8	10	-
+31253	イグジスター	-	5	9	11	-
+31254	Spirit of the Beast	-	6	10	12	-
+31255	GROOVE 04	-	4	7	9	-
+31256	HAPPY☆LUCKY☆YEAPPY	-	5	9	11	-
+31257	100sec. Kitchen Battle!!	-	4	7	10	-
+31258	恋歌疾風！かるたクイーンいろは	-	6	10	12	-
+31259	JET WORLD	-	4	6	10	-
+31260	キヤロラ衛星の軌跡	-	6	9	12	-
+32000	スパークリング☆彡ハイパーチューン！！	-	6	9	12	-
+32001	ADAMANT	-	6	9	11	-
+32002	スキッテイエェエエェ!!!!	-	8	10	12	-
+32003	IN BETWEEN	-	5	9	11	-
+32004	KOTONOHA ft. Kotoha	-	5	8	10	-
+32005	NOIXIA	-	7	10	12	-
+32006	uən	-	7	10	12	-
+32007	SISYPHUS	-	6	10	12	-
+32008	天使のカンタータ -Cantata of Angels-	-	6	10	12	-
+32009	destination	-	5	10	12	-
+32010	Pinky Happy Crazy	-	6	10	12	-
+32011	Digital Radiance	-	5	7	9	-
+32012	lowercase lifetime	-	5	9	11	-
+32013	Without Heaven	-	7	10	12	-
+32014	最強頂戴girl♡	-	4	8	10	-
+32015	ハルイロメロディー	-	4	7	10	-
+32016	Arcanos	-	4	7	10	-
+32017	Slumber☆Party	-	5	8	10	-
+32019	きゅうくらりん	2	5	8	10	-
+32020	Galaxy Collapse	-	5	7	10	-
+32021	hora de verdad	-	6	10	12	-
+32022	PERFECT HUMAN	3	5	7	10	-
+32023	MVP	-	5	8	11	-
+32024	Roar of Chronos	-	6	10	12	-
+32025	爆ぜりゃんせ	-	5	9	11	-
+32026	Bring The Fire	-	6	9	12	-
+32027	Bang-Boo Bumble	-	5	9	11	-
+32028	u gotta beat	-	6	10	12	-
+32029	Mighty Cutie	-	5	8	10	-
+32030	everlastingeuphoria:	-	5	9	11	-
+32031	Chasing After YOU ～夢の欠片～ ft. 小林マナ	-	5	7	10	-
+32032	Stargazing Trip ～星 探す旅～ ft. 小林マナ	-	5	9	11	-
+32033	Vibing! Shake it!	-	5	8	10	-
+32034	Flämingo	-	5	10	12	-
+32035	Drop Syndicate	-	6	9	12	-
+32036	1116	-	6	10	12	-
+32037	Lycoris	-	4	7	10	-
+32038	Aqvion	-	6	9	12	-
+32039	FERMI♡PARADOX	-	5	8	10	-
+32040	Space In Time	-	6	9	11	-
+32041	消極的セツナイズム	-	5	8	10	-
+32042	Constellation	-	5	9	11	-
+32043	ELYSIUM	-	5	8	11	-
+32044	ＰＡＳＴＥＬＩＳＭ	-	5	8	10	-
+32045	Dreamship	-	4	7	9	-
+32046	きみのせかい	-	5	8	11	-
+32047	Eleanor	-	4	7	10	-
+32048	Fiery Stallion	-	4	9	11	-
+32049	オッド♡ラヴィ	2	5	8	10	-
+32050	PIT A PAT	-	5	8	10	-
+32051	MARLIN	-	6	10	12	-
+32052	God Mind	-	7	10	12	-
+32053	DIVINE JUDGEMENT	-	6	10	12	-
+32054	Shirdal	-	5	8	10	-
+32055	Mid-Corner (Magic Maker)	-	6	10	12	-
+32056	Show Me All Your Love	-	5	9	11	-
+32057	弾幕信仰	-	5	8	10	-
+32058	EX-MASSIVE FIGHTER	-	6	10	12	-
+32059	無双	-	5	8	11	-
+32060	SUPER HEROINE!!	-	5	9	11	-
+32061	FlyAway	-	6	10	12	-
+32062	Satellite Burst	-	6	10	12	-
+32063	ロマンシングエスケープ	-	3	7	9	-
+32064	アラビアン ハイパー ナイト	-	6	10	12	-
+32065	Butterfly Twist	-	5	8	11	-
+32066	灼熱 Lost Summer Dayz	-	6	10	12	-
+32067	RAVE SYNDROME	-	6	9	11	-
+32068	SμG@R RU$#	-	7	10	12	-
+32069	TECHNO RUMBLE	-	6	9	11	-
+32070	断罪の一花	-	4	8	11	-
+32071	get set mind	-	5	8	10	-
+32072	ドリムチウ	-	4	7	10	-
+32073	PopなEDEN	-	5	9	11	-
+32074	CHAOTIC SUNBIRD	-	6	9	11	-
+32075	Raspberry Potion (feat.あれたん♡ & ぎゃるのしん☆)	-	5	9	11	-
+32076	Here We Go Now	-	6	10	12	-
+32077	Secret Rouge	-	5	8	10	-
+32078	飴玉	-	4	7	9	-
+32079	我ら完全無敵のアイドル!!	1	5	8	10	-
+32080	えだまめカレークッキング	2	5	8	11	-
+32081	ゲシュタルト	2	5	7	10	11
+32082	ビビデバ	1	4	7	10	-
+32083	メズマライザー	3	6	9	11	-
+32084	Bling-Bang-Bang-Born	2	4	7	10	11
+32085	イガク	1	4	7	9	-
+32093	Lightspeed	-	6	10	12	-
+32094	ファイナルレター	-	5	9	11	-
+32095	COSMIC V3LOCITY	-	6	10	12	-
+32096	ドーナツホール 2024	2	5	8	10	-
+32097	ハオ	1	4	8	11	-
+32098	オブソミート	1	4	7	10	-
+32099	Skratch Education Lv-1	-	7	10	12	-
+32100	Uaigh Gealaí	-	6	10	12	-
+32101	進捗ダメダメです	1	4	8	10	-
+32102	ギャ・ギャ・ギャ・ギャラクシー！	-	4	8	10	-
+32103	エクスプロウル	-	5	8	10	-
+32104	覚悟せよ！エンタンメ～ン ～より身の切り売り自暴自棄版～	-	5	9	11	-
+32105	朱と碧のランページ	-	5	8	10	-
+32106	Plea Per Phase	-	5	9	11	-
+32107	Cross Fire	-	6	10	12	-
+32108	XHRONOXAPSULΞ	-	7	10	12	-
+32109	EYE OF THE HEAVEN	-	6	10	12	-
+32110	Plazma	2	5	8	10	12
+32111	キスキツネ	1	4	7	10	-
+32112	Good Looking	-	4	8	10	-
+32261	Cold Moon	-	6	9	11	-
+32262	airflow -dreaming of the sky- Game Edition	-	3	7	9	-
+32263	Poppin' Soda	-	5	9	11	-
+32264	Inner Spirit -GIGA HiTECH MIX-	-	6	10	12	-
+32265	GHEL NAGARAJA	-	6	10	12	-
+32266	WILD FIRE	-	4	7	10	-
+32267	VIVID DEBUT!	-	6	9	11	-
+32269	STAY GOLD	-	5	9	12	-
+32270	大見解	-	4	8	10	-
+32271	Inside Insight	-	5	8	11	-
+32272	タンポポ	-	6	9	11	-
+32273	REFLEXES MANIPULATION	-	7	10	12	-
+32274	onslaught	-	7	10	12	-
+32275	CALDERA	-	7	10	11	-
+32276	Astrogazer	-	5	9	11	-
+32277	sink into the dream	-	6	8	10	-
+32278	黎明の情	-	5	8	10	-
+32279	Metagame Matador	-	6	9	11	-
+32280	The setting sun(burst)	-	5	8	11	-
+32281	レインボウ・フレーバー	-	4	7	10	-
+32282	ドゥサンコオデッセイ!!	-	6	10	12	-
+32283	光風霽月	-	7	10	12	-
+32284	隅田川夏恋歌	-	4	7	10	-
+32285	Aerial Skydive	-	5	8	10	-
+32286	THE ANCIENT KING IS BACK	-	4	8	11	-
+32287	Black Apple	-	5	8	11	-
+32288	insist	-	5	9	11	-
+32290	終末を追う者	-	6	10	12	-
+32291	Welcome to the Mosh Pit	-	6	10	12	-
+32978	Shooting Star	1	4	7	10	-
+33000	ビビッド ☆+*。キラキライム	3	6	9	12	-
+33001	かわいいだけじゃだめですか？	1	5	8	10	-
+33008	Countdown to Heaven or Hell	-	6	9	11	-
+33013	デラむぅのでらっくす☆どり～むぅ	-	4	7	10	-
+33015	鏡像都市	-	4	7	9	-
+33016	A Certified Rave Moment	-	5	9	11	-
+33017	Substance	-	5	8	11	-
+33020	夏色のセレナーデ	-	5	8	10	-
+33021	From Human Blood	-	6	10	12	-
+33022	Space Battleship S4TØ	-	7	10	12	-
+33024	Makin' It	-	6	10	12	-
+33028	Regina vespaE	-	6	10	12	-
+33031	JUST SYNC ft.Kanae Asaba	-	4	7	9	-
+33033	ベラ・ベ・カラベラ	-	6	9	] 11	-
+33035	MOCHIMOCHI DREAMIN!!	-	5	8	11	-
+33038	閃と雷管とロープ	-	5	8	11	-
+33039	Vitamin	-	6	9	11	-
+33040	RALLY '25	-	6	10	12	-
+33041	煉獄コンフィチュール	-	5	9	11	-
+33043	月下繚乱	-	5	9	11	-
+33045	Bang Bang Dance	-	5	9	11	-
+33047	Memoria Obscura	-	6	10	12	-
+33049	PALETTE	2	5	8	10	-
+33050	Disco Killer Music Lover	-	6	9	12	-
+33052	Fashion Fruit	-	5	9	11	-
+33061	ιgniЯRuina	-	6	10	12	-
+33062	SnapSkipSpark	-	5	9	11	-
+33064	AGETEKE ONDO	-	5	7	10	-
+33067	SPLASH!!!!!!!!!	-	5	8	10	-
+33071	それが、ボクの使命～レスキュー隊長 メンキュー～	-	4	8	10	-
+33073	2 Be Continued	-	5	9	12	-
+33074	Catch ya Getcha!	-	5	9	11	-
+33075	百恋ラブラスター	-	4	8	10	-
+33077	SHINING☆DANCE	-	4	7	10	-
+33078	Shooting Star	1	4	7	10	-
+33081	でんぱ どりる わんにゃー☆三	1	5	9	11	-
+33082	LEMON MELON COOKIE	2	4	7	9	-
+33083	もんめためたもん	1	4	8	10	-
+33084	バブリン	1	4	7	10	-
+33085	Caramel Pain	1	3	6	8	-
+33086	Nyan Nyan University	-	5	8	10	-
+33284	隅田川夏恋歌	-	4	7	10	-
+33285	Aerial Skydive	-	5	8	10	-
+33286	THE ANCIENT KING IS BACK	-	4	8	11	-
+33287	Black Apple	-	5	8	11	-
+33288	insist	-	5	9	11	-
+33290	終末を追う者	-	6	10	12	-
+33291	Welcome to the Mosh Pit	-	6	10	12	-
+33292	CHOCOLATE PHILOSOPHY	-	4	7	10	-
+33293	Destiny lovers	-	4	6	10	-
+33295	月光蝶	-	5	9	11	-
+33296	雷君	-	5	9	11	-
+33297	Hopeful Daybreak!!!	-	5	8	11	-
+33298	多極性ニューロンの崩壊による人間の末路	-	6	10	12	-
+33299	天泣	-	5	10	12	-
+33300	見習い天使と星降りの丘	-	5	10	12	-
+33301	鬼華-修羅の舞-	-	7	10	12	-
+33302	繚乱ヒットチャート	-	4	8	11	-
+33006	chaplet -IIDX re:build-	-	6	10	12	-
+33011	クレッシェンド	-	7	9	12	-
+33018	FiZZλ_PØT!0И	-	7	10	12	-
+33023	⁽⁽ଘ( ˙꒳˙ )ଓ⁾⁾ beyond reason	-	6	10	12	-
+33026	kors k's Let's make an Image Song!	-	5	8	11	-
+33030	voice of echo.	-	5	9	11	-
+33037	Hallucination	-	5	9	11	-
+33056	BattleRoyal	-	6	9	11	-
+33057	好吃来世deエレクトリック	-	4	7	10	-
+33058	Lisa-RICCIA	2	6	10	12	-
+33070	GOLD RUSH 2025	-	5	9	11	-
+33076	Begin	-	6	10	12	-
+33094	COLOR BURST	1	4	7	10	-
+33098	Watermelon Explosion	-	4	8	10	-
+33099	REcorrection	-	3	6	9	-
+33087	GO!	-	6	9	11	-
+33088	HORIZON BEATZ	-	4	8	10	-
+33089	RIZING-GAMERS.	-	5	10	12	-
+33090	SILKY BRAVE	-	5	9	10	-
+33091	Astra Blaze	-	6	10	12	-
+33092	Meteor☆Shower	-	5	9	11	-
+33093	King of Tribe	-	6	10	12	-
+33303	Pale Garden	-	4	7	10	-
+33304	CARNIVOROUS	-	5	8	11	-
+33305	ポチ子の幸せな日常	-	6	10	12	-
+33306	chronoxia	-	4	7	10	-
+33307	I Want To Do This Keep	-	4	7	10	-
+33003	HEROES	-	6	10	12	-
+33009	fixer	-	6	10	12	-
+33100	TOKAKU=ALMiRAJ	-	5	9	11	-
+33101	色を喪った街	-	5	10	12	-
+33102	HyperTwist	-	7	10	12	-
+33103	Last Card	-	6	9	11	-
+33105	華麗なる！音戯探偵ひなビタ♫	-	4	8	11	-
+33106	レシピのリドル	-	3	7	10	-
+33004	Nemophila	-	5	9	11	-
+33007	Signs and Wonders	-	4	7	9	-
+33019	タンポポ	-	6	9	11	-
+33032	Show Time	-	5	7	10	-
+33044	UNDO THE NIGHT	-	5	9	12	-
+33051	PERFECT GREAT!!	-	6	10	12	-
+33068	Amor∞Fati	-	6	10	12	-
+33308	Bleep Beep Bop	-	4	8	11	-
+33309	It's my Miracle	-	5	8	10	-
+33310	In Your EyEs	-	5	10	12	-
+33311	檄	-	6	9	11	-
+33312	Sakura Sunrise	-	6	9	11	-
+33313	Juicy	-	3	7	9	-
+33314	Lagrangian Point Ø	-	6	10	12	-
+33315	Rush!!	-	4	7	10	-
+33002	ラブコメトキドキシリアス	-	7	10	12	-
+33053	ベンガル vs. アムール Battle	-	6	10	12	-
+33095	不死身ごっこ	1	5	7	10	-
+33096	オーバーライド	2	5	9	11	-
+33104	RUINA	-	6	10	12	-
+33107	Skywalking	-	5	8	10	-
+33108	pique	-	6	9	11	-
+33005	BitRacer	-	6	10	12	-
+33112	恋愛観測	-	4	8	10	-
+33113	Τέλος	-	5	9	11	-
+33114	ACID VISION	-	6	9	10	-
+33014	Bloom	-	5	8	10	-
+33046	Dusk Endir	-	5	10	12	-
+33048	Funky Quirky	-	5	9	11	-
+33063	X-Plan	-	4	7	10	-
+33069	OMEGA	-	5	10	12	-
+33059	じぇりー じゅえる ジャングル	-	6	9	11	-
+33060	Ignited Night	-	6	9	11	-
+33065	サタデーナイト☆ギャロップ	-	7	10	12	-
+33066	Digitized Ocean	-	6	10	12	-
+33072	FIZZY FIZZY POP	-	4	8	10	-
+33109	Gimme a Big Beat(青龍 Remix)	-	6	10	12	-
+33110	Second Heaven(Mamonis Remix)	-	5	8	11	-
+33111	Kick The Rainbow	-	5	9	11	-
+33115	メテオラ-meteor-	-	5	9	11	-
+33116	Wizards!	-	4	8	10	-
+33117	THUNDERSTRIKE	-	6	10	12	-
+33118	blue anthem	-	6	9	11	-
+33119	Get Into The Groove feat.WaMi	-	5	7	10	-
+33120	ESPRIT ONE	-	6	8	11	-
+33121	Mighty Beat Monsterz	-	6	10	12	-
+33122	Smintheus	-	7	10	12	-
+33123	断罪のミメシス	-	7	10	12	-
+33124	Any%	-	6	10	12	-
+33125	キミとえがくキセキ	-	5	7	10	-
+33126	[E]	-	6	9	11	-
+33127	三日天下モンキー	-	4	8	11	-
+33129	夢色ワンダー	2	6	9	11	-
+33130	メルト CPK! Remix (初音ミク ver.)	2	4	8	11	-
+33131	Ex-Otogibanashi	1	3	6	10	-
+33132	9-1	-	7	9	11	-
+33133	霹靂	-	4	7	10	-
+33010	super double play sessions	-	7	10	12	-
+33012	Iridescent Memories	-	7	10	12	-
+33034	D.K.N. ON	-	5	9	11	-
+33036	Dolphin Kick	-	7	10	12	-
+33042	Limelight	-	6	10	12	-
+`
+
+/* ===== 曲名＋レベルテーブル ===== */
+const musicDB = {}
+musicTSV.trim().split("\n").forEach(l=>{
+  if(!l.trim()) return
+  const [id,title,spb,spn,sph,spa,spl] = l.split("\t")
+  musicDB[id] = {
+    title,
+    spb,
+    spn,
+    sph,
+    spa,
+    spl
+  }
+})
+
+/* ===== VERSION ORDER ===== */
+const versionOrder=[
+"ALL","1st style","substream","2nd style","3rd style","4th style","5th style",
+"6th style","7th style","8th style","9th style","10th style","IIDX RED",
+"HAPPY SKY","DistorteD","GOLD","DJ TROOPERS","EMPRESS","SIRIUS",
+"Resort Anthem","Lincle","tricoro","SPADA","PENDUAL","copula","SINOBUZ",
+"CANNON BALLERS","Rootage","HEROIC VERSE","BISTROVER","CastHour",
+"RESIDENT","EPOLIS","Pinky Crush","Sparkle Shower"
+]
+
+/* ===== VERSION MAP ===== */
+const versionMap4={
+"1":"1st style","12":"substream","14":"substream","2":"2nd style","3":"3rd style",
+"4":"4th style","5":"5th style","6":"6th style","7":"7th style","8":"8th style","9":"9th style"
+}
+
+const versionMap5={
+"10":"10th style","11":"IIDX RED","12":"HAPPY SKY","13":"DistorteD","14":"GOLD",
+"15":"DJ TROOPERS","16":"EMPRESS","17":"SIRIUS","18":"Resort Anthem","19":"Lincle",
+"20":"tricoro","21":"SPADA","22":"PENDUAL","23":"copula","24":"SINOBUZ",
+"25":"CANNON BALLERS","26":"Rootage","27":"HEROIC VERSE","28":"BISTROVER",
+"29":"CastHour","30":"RESIDENT","31":"EPOLIS","32":"Pinky Crush","33":"Sparkle Shower"
+}
+
+function detectVersion(mid){
+  const id=String(mid)
+  if(id.length===4){
+    return versionMap4[id[0]]||"UNKNOWN"
+  }
+  if(id.length===5){
+    return versionMap5[id.slice(0,2)]||"UNKNOWN"
+  }
+  return "UNKNOWN"
+}
+
+/* ===== VERSION LABEL [n] 用 ===== */
+function getVersionIndex(verName){
+  const idx = versionOrder.indexOf(verName)
+  if(idx <= 0) return "?"
+  return String(idx)  // [1]〜
+}
+
+/* ===== レベル取得 ===== */
+function getLevelFromTSV(mid, diff){
+  const m = musicDB[mid]
+  if(!m) return "-"
+  return {
+    SPB: m.spb,
+    SPN: m.spn,
+    SPH: m.sph,
+    SPA: m.spa,
+    SPL: m.spl
+  }[diff] || "-"
+}
+
+/* ===== 単一譜面のレベル表示 (10) ===== */
+function getSingleLevelLabel(mid, diff){
+  const lv = getLevelFromTSV(mid, diff)
+  if(!lv || lv === "-") return "(-)"
+  return `(☆${lv})`
+}
+
+
+/* ===== ALL時のレベル表示 (-|☆2|☆6|☆10|-) ===== */
+function getAllLevelLabel(mid){
+  const m = musicDB[mid]
+  if(!m) return "(-|-|-|-|-)"
+  const arr = [m.spb, m.spn, m.sph, m.spa, m.spl].map(v=>{
+    if(!v || v === "-" ) return "-"
+    return "☆" + v
+  })
+  return `(${arr.join("|")})`
+}
+
+/* ===== 単一譜面のレベル表示 (10) ===== */
+function getSingleLevelLabel(mid, diff){
+  const lv = getLevelFromTSV(mid, diff)
+  if(!lv || lv === "-") return "(-)"
+  return `(☆${lv})`
+}
+
+/* ===== レベルフィルタ用のレベル表示 ===== */
+function getFilteredLevelLabel(mid){
+  const m = musicDB[mid]
+  if(!m) return ""
+
+  // レベルフィルタが ALL のときは全難易度表示
+  if(currentLevel === "ALL"){
+    return getAllLevelLabel(mid)
+  }
+
+  // currentLevel と一致する難易度だけ表示
+  const lv = currentLevel
+  const diffs = ["spb","spn","sph","spa","spl"]
+
+  for(const d of diffs){
+    if(m[d] == lv){
+      return `(☆${lv})`
+    }
+  }
+
+  return ""
+}
+
+/* ===== VERSION SELECT ===== */
+const verSel=document.getElementById("versionFilter")
+versionOrder.forEach(v=>{
+  const o=document.createElement("option")
+  o.value=v
+  o.textContent=(v==="ALL")?"ALL VERSION":v
+  verSel.appendChild(o)
+})
+
+/* ===== SCORE ===== */
+let scores=[]
+let allDates=[]   // 全日付を保持
+
+document.getElementById("jsonFile").addEventListener("change",e=>{
+  const file=e.target.files[0]
+  if(!file) return
+
+  const reader=new FileReader()
+
+  reader.onload=()=>{
+    const raw=JSON.parse(reader.result)
+    scores=[]
+
+    Object.values(raw.data).forEach(s=>{
+      const diffs=["SPB","SPN","SPH","SPA","SPL"]
+
+      for(let i=0;i<5;i++){
+        if(s.rArray[i]===-1) continue
+
+        let lamp=[
+          "NO PLAY","FAILED","ASSISTED","EASY",
+          "CLEAR","HARD","EXHARD","FULL COMBO"
+        ][s.cArray[i]]
+
+        scores.push({
+          mid:s.mid,
+          title:(musicDB[s.mid]?.title)||s.mid,
+          version:detectVersion(s.mid),
+          diff:diffs[i],
+          lamp:lamp,
+          rank:["AAA","AA","A","B","C","D","E","F"][s.rArray[i]],
+          score:s.esArray[i]||0,
+          pg:s.pgArray[i]||0,
+          gr:s.gArray[i]||0,
+          miss:s.mArray[i]||0,
+          opt3:s.optArray[i] || 0,   // ★ USED OPTION 用
+          updatedAt:s.updatedAt || ""
+        })
+      }
+    })
+
+    buildAllDates()
+    render()
+  }
+
+  reader.readAsText(file)
+})
+
+/* ===== 全日付一覧を作る ===== */
+function buildAllDates(){
+  allDates = [...new Set(scores.map(s => formatDate(s.updatedAt)))]
+    .filter(d => d !== "-")
+    .sort((a,b)=> new Date(b) - new Date(a))
+}
+
+/* ===== フィルタ状態 ===== */
+let currentDiff="ALL"
+let currentLamp="ALL"
+let currentDj="ALL"
+let currentDate="ALL"
+let currentLevel="ALL"
+
+/* ===== フィルタボタン ===== */
+document.querySelectorAll(".diff-btn").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll(".diff-btn").forEach(b=>b.classList.remove("active"))
+    btn.classList.add("active")
+    currentDiff=btn.dataset.diff
+    render()
+  }
+})
+
+document.querySelectorAll(".lamp-btn").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll(".lamp-btn").forEach(b=>b.classList.remove("active"))
+    btn.classList.add("active")
+    currentLamp=btn.dataset.lamp
+    render()
+  }
+})
+
+document.querySelectorAll(".dj-btn").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll(".dj-btn").forEach(b=>b.classList.remove("active"))
+    btn.classList.add("active")
+    currentDj=btn.dataset.dj
+    render()
+  }
+})
+
+/* ===== レベルフィルタボタン ===== */
+document.querySelectorAll(".lv-btn").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll(".lv-btn").forEach(b=>b.classList.remove("active"))
+    btn.classList.add("active")
+    currentLevel = btn.dataset.lv
+    render()
+  }
+})
+
+/* ===== 日付変更 ===== */
+document.getElementById("dateFilter").onchange = e => {
+  currentDate = e.target.value
+  render()
+}
+
+/* ===== 日付整形 ===== */
+function formatDate(iso){
+  if(!iso) return "-"
+  const d = new Date(iso)
+  if(isNaN(d)) return "-"
+  const y = d.getFullYear()
+  const m = String(d.getMonth()+1).padStart(2,"0")
+  const day = String(d.getDate()).padStart(2,"0")
+  return `${y}/${m}/${day}`
+}
+
+/* ===== サマリー集計 ===== */
+function updateStats(list){
+
+  // ▼ 全体ランプ
+  const totalLamp={
+    FAILED:0,ASSISTED:0,EASY:0,CLEAR:0,
+    HARD:0,EXHARD:0,"FULL COMBO":0
+  }
+  scores.forEach(s=>{
+    if(totalLamp[s.lamp]!=null) totalLamp[s.lamp]++
+  })
+
+  // ▼ フィルタ中ランプ
+  const curLamp={
+    FAILED:0,ASSISTED:0,EASY:0,CLEAR:0,
+    HARD:0,EXHARD:0,"FULL COMBO":0
+  }
+  list.forEach(s=>{
+    if(curLamp[s.lamp]!=null) curLamp[s.lamp]++
+  })
+
+  // ▼ 全体 DJ LEVEL
+  const totalDj={AAA:0,AA:0,A:0,B:0,C:0,D:0,E:0,F:0}
+  scores.forEach(s=>totalDj[s.rank]++)
+
+  // ▼ フィルタ中 DJ LEVEL
+  const curDj={AAA:0,AA:0,A:0,B:0,C:0,D:0,E:0,F:0}
+  list.forEach(s=>curDj[s.rank]++)
+
+  const total=list.length
+  const rate={}
+  Object.keys(curDj).forEach(k=>{
+    rate[k]=total?Math.round((curDj[k]/total)*100):0
+  })
+
+  const clearCount=list.filter(s=>
+    ["EASY","ASSISTED","CLEAR","HARD","EXHARD","FULL COMBO"].includes(s.lamp)
+  ).length
+
+  const clearRate=total?Math.round((clearCount/total)*100):0
+
+  /* ====== ▼ HTML へ反映 ====== */
+
+  // TOTAL CLEAR LAMPS
+  document.getElementById("sum-total-fc").textContent = totalLamp["FULL COMBO"]
+  document.getElementById("sum-total-exh").textContent = totalLamp.EXHARD
+  document.getElementById("sum-total-hard").textContent = totalLamp.HARD
+  document.getElementById("sum-total-clear").textContent = totalLamp.CLEAR
+  document.getElementById("sum-total-easy").textContent = totalLamp.EASY
+  document.getElementById("sum-total-assist").textContent = totalLamp.ASSISTED
+  document.getElementById("sum-total-failed").textContent = totalLamp.FAILED
+
+  // TOTAL DJ LEVELS
+  document.getElementById("sum-total-aaa").textContent = totalDj.AAA
+  document.getElementById("sum-total-aa").textContent = totalDj.AA
+  document.getElementById("sum-total-a").textContent = totalDj.A
+  document.getElementById("sum-total-b").textContent = totalDj.B
+  document.getElementById("sum-total-c").textContent = totalDj.C
+  document.getElementById("sum-total-d").textContent = totalDj.D
+  document.getElementById("sum-total-e").textContent = totalDj.E
+  document.getElementById("sum-total-f").textContent = totalDj.F
+
+  // ▼ TOTAL LEVEL CLEAR COUNT
+  const totalBands = countLevelBand(scores)
+  document.getElementById("sum-total-lv-1-7").textContent = totalBands["1-7"]
+  document.getElementById("sum-total-lv-8-9").textContent = totalBands["8-9"]
+  document.getElementById("sum-total-lv-10").textContent = totalBands["10"]
+  document.getElementById("sum-total-lv-11").textContent = totalBands["11"]
+  document.getElementById("sum-total-lv-12").textContent = totalBands["12"]
+
+  // FILTERED CLEAR LAMPS
+  document.getElementById("sum-cur-fc").textContent = curLamp["FULL COMBO"]
+  document.getElementById("sum-cur-exh").textContent = curLamp.EXHARD
+  document.getElementById("sum-cur-hard").textContent = curLamp.HARD
+  document.getElementById("sum-cur-clear").textContent = curLamp.CLEAR
+  document.getElementById("sum-cur-easy").textContent = curLamp.EASY
+  document.getElementById("sum-cur-assist").textContent = curLamp.ASSISTED
+  document.getElementById("sum-cur-failed").textContent = curLamp.FAILED
+
+  // FILTERED DJ LEVELS
+  document.getElementById("sum-cur-aaa").textContent = curDj.AAA
+  document.getElementById("sum-cur-aa").textContent = curDj.AA
+  document.getElementById("sum-cur-a").textContent = curDj.A
+  document.getElementById("sum-cur-b").textContent = curDj.B
+  document.getElementById("sum-cur-c").textContent = curDj.C
+  document.getElementById("sum-cur-d").textContent = curDj.D
+  document.getElementById("sum-cur-e").textContent = curDj.E
+  document.getElementById("sum-cur-f").textContent = curDj.F
+
+  // ▼ FILTERED LEVEL CLEAR COUNT
+const curBands = countLevelBand(list)
+document.getElementById("sum-cur-lv-1-7").textContent = curBands["1-7"]
+document.getElementById("sum-cur-lv-8-9").textContent = curBands["8-9"]
+document.getElementById("sum-cur-lv-10").textContent = curBands["10"]
+document.getElementById("sum-cur-lv-11").textContent = curBands["11"]
+document.getElementById("sum-cur-lv-12").textContent = curBands["12"]
+
+  // CLEAR RATE
+  document.getElementById("sum-clear-rate").textContent = clearRate + "%("+ clearCount + "/" + total + ")"
+
+}
+
+function countTotalLevelBand(){
+  return countLevelBand(scores)
+}
+
+function countLevelBand(list){
+  const bands = {
+    "1-7": 0,
+    "8-9": 0,
+    "10": 0,
+    "11": 0,
+    "12": 0
+  }
+
+  list.forEach(s=>{
+    const lv = Number(getLevelFromTSV(s.mid, s.diff))
+    if(!lv || lv === "-") return
+
+    const isClear = (
+      s.lamp === "ASSISTED" ||
+      s.lamp === "EASY" ||
+      s.lamp === "CLEAR" ||
+      s.lamp === "HARD" ||
+      s.lamp === "EXHARD" ||
+      s.lamp === "FULL COMBO"
+    )
+    if(!isClear) return
+
+    if(lv <= 7) bands["1-7"]++
+    else if(lv <= 9) bands["8-9"]++
+    else if(lv === 10) bands["10"]++
+    else if(lv === 11) bands["11"]++
+    else if(lv === 12) bands["12"]++
+  })
+
+  return bands
+}
+
+
+/* ===== RENDER ===== */
+function render(){
+
+  let list=[...scores]
+
+  const q=document.getElementById("search").value.toLowerCase()
+  const ver=verSel.value
+
+  if(q){
+    list=list.filter(s=>
+      (s.title+"").toLowerCase().includes(q)
+    )
+  }
+
+  if(ver!=="ALL"){
+    list=list.filter(s=>s.version===ver)
+  }
+
+  if(currentDiff!=="ALL"){
+    list=list.filter(s=>s.diff===currentDiff)
+  }
+
+  if(currentLamp!=="ALL"){
+    list=list.filter(s=>s.lamp===currentLamp)
+  }
+
+  if(currentDj!=="ALL"){
+    list=list.filter(s=>s.rank===currentDj)
+  }
+
+  if(currentDate!=="ALL"){
+    list=list.filter(s => formatDate(s.updatedAt) === currentDate)
+  }
+
+  /* ▼ レベルフィルタ */
+  if(currentLevel !== "ALL"){
+    list = list.filter(s => {
+      const lvStr = getLevelFromTSV(s.mid, s.diff)
+      if(!lvStr || lvStr === "-") return false
+      const lv = Number(lvStr)
+      if(isNaN(lv)) return false
+
+      if(currentLevel === "1-8") return lv >= 1 && lv <= 8
+      return lv === Number(currentLevel)
+    })
+  }
+
+  const grouped={}
+  list.forEach(s=>{
+    if(!grouped[s.mid]) grouped[s.mid]=[]
+    grouped[s.mid].push(s)
+  })
+
+  let songs = Object.entries(grouped).map(([mid, diffs]) => {
+    const latest = diffs.reduce((a, b) => {
+      const da = new Date(a.updatedAt || 0)
+      const db = new Date(b.updatedAt || 0)
+      return db > da ? b : a
+    }).updatedAt
+
+    return { mid, diffs, latest }
+  })
+
+  const root=document.getElementById("list")
+  root.innerHTML=""
+
+  songs.forEach(song=>{
+    const { mid, diffs, latest } = song
+    const div = document.createElement("div")
+    div.className = "song"
+
+    const verName = diffs[0]?.version || "UNKNOWN"
+    const verIdx  = getVersionIndex(verName)
+    function getVersionIndex(verName){
+  const idx = versionOrder.indexOf(verName)
+
+  if(idx <= 0) return "?"
+  if(idx === 1) return "1"
+  if(idx === 2) return "sub"   // substream だけ特別
+
+  return String(idx - 1)       // それ以外は n-1
+}
+
+
+    // ▼ タイトル表示：[n] 曲名 (レベル or 全譜面)
+   let titleLabel = ""
+
+if(currentLevel !== "ALL"){
+  // レベルフィルタが選ばれているとき
+  titleLabel = getFilteredLevelLabel(mid)
+}else if(currentDiff !== "ALL"){
+  // 難易度フィルタが選ばれているとき
+  titleLabel = getSingleLevelLabel(mid, currentDiff)
+}else{
+  // どちらもALL → 全難易度表示
+  titleLabel = getAllLevelLabel(mid)
+}
+
+
+
+
+    const titleText = (musicDB[mid]?.title) || mid
+    let html = `<div class="title">[${verIdx}] ${titleText} ${titleLabel}</div>`
+
+    html += `
+      <table>
+        <tr>
+          <th>DIFF</th>
+          <th>LAMP</th>
+          <th>RANK</th>
+          <th>SCORE</th>
+          <th>PGREAT</th>
+          <th>GREAT</th>
+          <th>MISS</th>
+          <th>USED OPTION</th>
+        </tr>
+    `
+
+    diffs.forEach(d=>{
+      let lampClass = d.lamp==="FULL COMBO" ? "FULLCOMBO" : d.lamp
+
+      const isMobile = window.innerWidth < 600
+      const used = getUsedOptions(d.opt3, isMobile)
+      let usedHtml = ""
+
+      if (used.length === 0) {
+        usedHtml = `<span class="used-option-badge no-use">N/A</span>`
+      } else {
+        usedHtml = used
+          .map(u => `<span class="used-option-badge">${u}</span>`)
+          .join("")
+      }
+
+      html += `
+        <tr>
+          <td class="${d.diff}">${d.diff}</td>
+          <td class="${lampClass}">${d.lamp}</td>
+          <td>${d.rank}</td>
+          <td>${d.score}</td>
+          <td>${d.pg}</td>
+          <td>${d.gr}</td>
+          <td>${d.miss}</td>
+          <td class="used-options">${usedHtml}</td>
+        </tr>
+      `
+    })
+
+    html += `</table>`
+
+    html += `
+      <div class="sp-lastplay">
+        LAST PLAY：${formatDate(latest)}
+      </div>
+    `
+
+    div.innerHTML = html
+    root.appendChild(div)
+  })
+
+  /* ▼ 日付プルダウン更新 */
+  const dfSel = document.getElementById("dateFilter")
+  const prev = currentDate
+
+  dfSel.innerHTML = `<option value="ALL">ALL DAYS</option>`
+
+  allDates.forEach(d=>{
+    dfSel.innerHTML += `<option value="${d}">${d}</option>`
+  })
+
+  dfSel.value = prev
+  updateStats(list)
+}
+
+document.getElementById("search").oninput=render
+verSel.onchange=render
+
+document.getElementById("summaryToggle").onclick = () => {
+  const body = document.getElementById("summaryBody")
+  body.style.display = (body.style.display === "none") ? "block" : "none"
+}
+
+/* =========================================================
+   ▼ LEVEL 12 CSV エクスポート（beatmania公式仕様準拠）
+   ---------------------------------------------------------
+   参考: beatmania IIDX のスコアデータCSVの文字について
+        https://tateren.hateblo.jp/entry/2017/12/25/234622
+
+   公式サイトが出力するスコアデータCSVでは、CP932(≒Shift_JIS)に
+   存在しないUnicode文字（Latin-1の一部のアクセント付き文字や
+   ♥♨焱など）が、往復変換できるよう別の文字に置き換えられている。
+   ========================================================= */
+const OFFICIAL_CHAR_MAP = {
+  "\u00A1": "!",   // ¡ (¡Viva!)                    → !
+  "\u00C6": "A",   // Æ (ÆTHER)                     → A
+  "\u00F6": "o",   // ö (Atröpøs)                   → o
+  "\u00F8": "o",   // ø (Atröpøs)                   → o
+  "\u00DC": "U",   // Ü (Übertreffen)               → U
+  "\u00E4": "a",   // ä (Präludium)                 → a
+  "\u00E9": "e",   // é (L'amour et la liberté 等)   → e
+  "\u00EA": "e",   // ê (Raison d'être～交差する宿命～) → e
+  "\u2665": "",    // ♥ (Double ♥♥ Loving 等)        → 削除
+  "\u2668": " ",   // ♨ (ギョギョっと人魚♨爆婚ブライダル) → 半角スペース
+  "\u7131": "火",   // 焱 (焱影)                      → 火
+}
+
+function toOfficialChars(str){
+  if(str==null) return ""
+  let s = String(str)
+  for(const [from,to] of Object.entries(OFFICIAL_CHAR_MAP)){
+    s = s.split(from).join(to)
+  }
+  return s
+}
+
+/* ===== CSVフィールドのエスケープ ===== */
+function csvField(v){
+  const s = (v===undefined || v===null) ? "" : String(v)
+  if(/[",\n\r]/.test(s)){
+    return `"${s.replace(/"/g,'""')}"`
+  }
+  return s
+}
+
+/* ===== クリアタイプの内部名 → 公式表記 =====*/
+const LAMP_OFFICIAL_MAP = {
+  "NO PLAY": "NO PLAY",
+  "FAILED": "FAILED",
+  "ASSISTED": "ASSIST CLEAR",
+  "EASY": "EASY CLEAR",
+  "CLEAR": "CLEAR",
+  "HARD": "HARD CLEAR",
+  "EXHARD": "EX HARD CLEAR",
+  "FULL COMBO": "FULLCOMBO CLEAR",
+}
+
+/* ===== 最終プレー日時を "YYYY-MM-DD HH:MM" 形式に整形 ===== */
+function officialDateTime(iso){
+  if(!iso) return ""
+  const d = new Date(iso)
+  if(isNaN(d)) return ""
+  const y = d.getFullYear()
+  const mo = String(d.getMonth()+1).padStart(2,"0")
+  const da = String(d.getDate()).padStart(2,"0")
+  const h = String(d.getHours()).padStart(2,"0")
+  const mi = String(d.getMinutes()).padStart(2,"0")
+  return `${y}-${mo}-${da} ${h}:${mi}`
+}
+
+/* 難易度コード（内部）と公式の難易度ラベル */
+const DIFF_DEFS = [
+  ["SPB","BEGINNER"],
+  ["SPN","NORMAL"],
+  ["SPH","HYPER"],
+  ["SPA","ANOTHER"],
+  ["SPL","LEGGENDARIA"],
+]
+
+/* ===== 現行AC版(music_data.binより抽出)に実在する曲IDの一覧 =====
+   これに含まれないmidは「AC版では削除済み/未収録」の曲としてCSV出力から除外する。 */
+const AC_VALID_IDS = new Set("1000,1001,1003,1004,1005,1006,1007,1008,1009,1010,1015,1017,1019,1020,2000,2003,2005,2006,2008,2012,2016,3000,3001,3004,3005,3006,3007,3008,3009,3010,3011,3012,3013,4000,4001,4002,4003,4004,4005,4006,4007,4008,4012,4014,4015,4016,4017,4020,4021,4023,4025,4029,4032,4033,5000,5004,5007,5009,5010,5011,5012,5014,5015,5016,5017,5018,5019,5021,5023,5024,5025,5030,6001,6003,6004,6005,6007,6010,6011,6012,6013,6014,6015,6016,6018,6019,6021,6022,6023,6027,6029,6031,7002,7003,7004,7006,7008,7010,7011,7014,7016,7018,7021,7022,7024,7026,7031,7032,7034,7036,7037,7038,7039,8000,8001,8003,8004,8005,8006,8008,8009,8013,8017,8018,8020,8023,8024,8025,8026,8027,8028,8029,8031,8032,8039,8040,8043,8044,8045,8048,8049,9000,9001,9002,9003,9006,9008,9010,9011,9012,9015,9016,9018,9022,9026,9027,9028,9029,9030,9033,9034,9036,9037,9038,9039,9042,9043,9044,9045,9046,9048,9051,9052,9055,9057,9058,9059,10001,10002,10004,10005,10006,10009,10010,10013,10016,10017,10018,10019,10020,10022,10023,10024,10025,10028,10031,10033,10034,10036,10038,10040,10041,10042,10046,10047,10048,10049,10052,10053,11001,11002,11004,11005,11007,11008,11009,11010,11011,11012,11013,11014,11015,11018,11019,11025,11026,11028,11030,11031,11032,11033,11034,11035,11036,11037,11038,11040,11043,11050,11051,11052,12000,12002,12003,12004,12005,12006,12007,12008,12009,12010,12011,12012,12013,12014,12015,12016,12018,12019,12020,12021,12022,12023,12025,12026,12027,12028,12029,12030,12031,12034,12036,12037,12038,12039,12040,12041,12043,12044,12045,12046,12049,12050,12051,12052,12053,12054,13000,13001,13002,13003,13005,13009,13010,13011,13012,13013,13014,13015,13017,13019,13021,13024,13025,13026,13028,13029,13031,13032,13035,13037,13038,13039,13040,13041,13044,13046,13047,13048,13050,13051,13052,13053,13054,13055,14000,14001,14002,14003,14004,14005,14006,14007,14008,14009,14011,14012,14014,14015,14016,14018,14019,14020,14021,14022,14023,14028,14029,14030,14031,14033,14035,14036,14037,14038,14039,14040,14044,14046,14047,14049,14050,14051,14052,14053,14055,14056,14058,15000,15001,15002,15003,15004,15005,15006,15007,15008,15009,15010,15011,15012,15013,15014,15015,15016,15018,15019,15020,15021,15022,15023,15024,15025,15026,15027,15028,15029,15030,15031,15032,15038,15039,15040,15041,15043,15044,15045,15048,15049,15050,15052,15054,15055,15056,15057,15058,15059,15061,16000,16001,16002,16003,16004,16005,16006,16008,16009,16010,16011,16013,16014,16015,16016,16017,16018,16019,16020,16021,16022,16023,16024,16025,16026,16027,16028,16029,16030,16031,16032,16034,16035,16036,16037,16038,16039,16040,16041,16042,16043,16045,16047,16049,16050,16051,16052,16053,17000,17001,17002,17003,17004,17005,17006,17007,17008,17009,17012,17013,17014,17015,17016,17017,17020,17021,17022,17023,17024,17025,17026,17027,17028,17032,17033,17034,17035,17037,17039,17040,17041,17042,17043,17044,17046,17050,17051,17052,17053,17054,17055,17056,17057,17058,17059,17060,17061,17062,17063,17064,17065,18000,18001,18002,18003,18004,18005,18006,18008,18009,18010,18011,18012,18013,18014,18015,18017,18018,18019,18020,18021,18022,18023,18024,18025,18026,18027,18028,18029,18030,18032,18035,18036,18039,18040,18042,18043,18044,18045,18047,18050,18051,18053,18054,18055,18056,18057,18059,18060,18061,18062,18064,18066,18067,18068,18069,18071,18072,19001,19002,19003,19004,19005,19006,19007,19008,19009,19010,19011,19012,19013,19014,19015,19016,19017,19018,19019,19020,19022,19024,19025,19026,19027,19028,19029,19030,19031,19032,19033,19034,19035,19036,19037,19038,19039,19040,19042,19045,19046,19047,19048,19049,19050,19051,19052,19053,19054,19055,19056,19058,19059,19060,19062,19063,19064,19065,19067,19068,19069,19070,19071,19072,19073,19074,19075,20000,20002,20003,20004,20005,20006,20007,20008,20009,20011,20012,20013,20015,20016,20017,20018,20019,20020,20021,20022,20023,20024,20025,20027,20028,20029,20030,20031,20032,20033,20035,20036,20037,20038,20039,20040,20041,20043,20044,20046,20047,20048,20049,20051,20052,20053,20054,20055,20058,20059,20061,20062,20063,20064,20065,20066,20067,20068,20070,20071,20072,20073,20074,20076,20082,20083,20086,20087,20088,20089,20090,20091,20093,20094,20095,20096,20097,20098,20099,20100,20101,20102,21001,21002,21003,21004,21005,21006,21007,21008,21011,21012,21013,21014,21015,21016,21018,21019,21020,21021,21022,21024,21025,21026,21027,21029,21030,21032,21033,21034,21035,21037,21038,21039,21041,21042,21043,21044,21045,21047,21048,21050,21051,21052,21053,21055,21056,21058,21059,21060,21061,21062,21063,21064,21065,21066,21067,21068,21069,21073,21076,21077,21078,21079,21081,21082,21083,21084,21085,21087,21088,21089,21090,22001,22002,22003,22004,22005,22006,22007,22008,22009,22010,22011,22012,22013,22014,22015,22016,22017,22018,22019,22024,22025,22026,22027,22028,22029,22031,22032,22033,22034,22035,22037,22038,22039,22040,22041,22042,22043,22044,22046,22047,22048,22049,22052,22053,22054,22055,22056,22057,22058,22059,22060,22061,22062,22063,22064,22065,22067,22068,22069,22070,22073,22074,22075,22077,22079,22080,22083,22084,22085,22086,22087,22088,22089,22090,22091,22092,22093,22094,22095,22098,22099,22100,23000,23001,23002,23003,23004,23005,23007,23008,23009,23010,23011,23012,23013,23015,23016,23017,23018,23019,23021,23022,23026,23027,23028,23029,23030,23031,23032,23033,23034,23035,23036,23037,23038,23039,23041,23043,23044,23045,23046,23047,23048,23049,23050,23051,23052,23053,23054,23055,23056,23057,23058,23060,23061,23062,23063,23066,23067,23068,23069,23070,23072,23073,23074,23075,23076,23079,23080,23082,23083,23084,23085,23087,23088,23090,23091,23092,23093,23094,23095,24000,24001,24003,24004,24005,24006,24007,24008,24009,24010,24011,24012,24013,24014,24015,24016,24017,24018,24019,24020,24021,24022,24023,24024,24025,24026,24027,24028,24029,24030,24031,24032,24033,24034,24036,24037,24038,24039,24040,24041,24043,24044,24045,24046,24047,24049,24050,24051,24052,24054,24055,24056,24057,24058,24060,24063,24065,24066,24067,24068,24069,24070,24071,24072,24073,24074,24075,24076,24077,24078,24079,24080,24081,24082,24083,24084,24085,24086,24087,24088,24089,24090,24091,24092,24093,24094,24095,25000,25001,25002,25003,25004,25005,25006,25007,25008,25009,25010,25011,25012,25013,25014,25015,25016,25017,25018,25019,25021,25024,25026,25027,25028,25029,25030,25031,25032,25033,25034,25035,25036,25037,25038,25039,25040,25041,25042,25043,25045,25046,25047,25048,25049,25050,25051,25052,25053,25054,25055,25056,25057,25058,25059,25061,25063,25068,25069,25070,25071,25073,25074,25075,25076,25078,25079,25080,25081,25082,25083,25084,25085,25086,25088,25089,25090,25091,25092,25093,25094,25095,26000,26001,26003,26004,26005,26007,26009,26010,26011,26012,26015,26016,26017,26018,26019,26020,26023,26024,26025,26026,26027,26028,26029,26030,26031,26033,26034,26036,26037,26038,26039,26040,26041,26042,26043,26044,26046,26047,26048,26049,26050,26051,26052,26053,26054,26055,26058,26059,26060,26063,26064,26066,26067,26068,26069,26070,26071,26072,26074,26076,26077,26078,26079,26080,26081,26082,26083,26084,26085,26086,26087,26088,26089,26090,26091,26092,26093,26094,26095,26097,26099,26101,26104,26106,26107,26108,26109,26110,26112,26113,26114,26115,27000,27001,27002,27003,27004,27005,27007,27008,27009,27010,27011,27012,27013,27014,27015,27016,27017,27018,27019,27020,27021,27022,27023,27024,27025,27026,27029,27030,27031,27032,27033,27034,27035,27036,27037,27039,27041,27043,27044,27045,27046,27047,27048,27049,27050,27051,27052,27053,27054,27056,27058,27059,27060,27061,27062,27063,27064,27065,27066,27069,27070,27074,27075,27076,27077,27078,27079,27080,27081,27083,27084,27087,27088,27090,27092,27094,27095,27096,27100,27101,27102,27103,27105,27106,27107,27108,27109,27110,27112,27113,27114,27116,28000,28001,28002,28004,28005,28007,28008,28009,28010,28011,28014,28015,28016,28017,28018,28019,28020,28021,28022,28023,28024,28025,28027,28028,28029,28030,28031,28032,28033,28035,28036,28037,28038,28039,28040,28041,28042,28043,28044,28045,28046,28047,28048,28049,28050,28051,28052,28053,28055,28056,28057,28058,28059,28060,28061,28062,28064,28065,28066,28067,28069,28070,28071,28072,28073,28074,28076,28077,28079,28080,28081,28082,28083,28084,28085,28086,28087,28088,28089,28090,28091,28092,28093,28096,28098,28100,28102,28109,28110,28112,28113,28114,28117,29000,29001,29002,29003,29005,29006,29007,29008,29009,29010,29011,29012,29013,29015,29016,29017,29018,29019,29020,29021,29022,29024,29025,29026,29027,29028,29029,29030,29033,29035,29036,29037,29038,29039,29040,29041,29042,29043,29044,29045,29046,29047,29049,29050,29051,29052,29053,29054,29055,29056,29057,29058,29060,29061,29062,29063,29064,29065,29066,29068,29069,29070,29074,29075,29076,29077,29078,29079,29080,29081,29082,29084,29085,29086,29087,29088,29089,29090,29091,29092,29093,29094,29095,29096,29097,29098,29099,29100,29102,30000,30001,30002,30004,30005,30006,30007,30008,30009,30010,30011,30012,30014,30015,30016,30017,30018,30019,30020,30022,30024,30025,30026,30027,30028,30029,30030,30031,30032,30033,30034,30036,30037,30038,30039,30040,30041,30042,30043,30045,30046,30047,30048,30049,30051,30052,30053,30054,30055,30056,30057,30058,30059,30060,30061,30062,30063,30064,30065,30066,30067,30068,30069,30070,30072,30073,30075,30076,30077,30078,30079,30080,30081,30082,30086,30087,30088,30089,30090,30091,30092,30093,30094,30095,30096,30097,30098,30099,30100,30101,30102,30106,30107,30108,30109,30111,30114,31000,31001,31003,31004,31005,31006,31007,31008,31009,31010,31011,31012,31013,31014,31015,31016,31017,31018,31019,31020,31021,31023,31024,31025,31026,31027,31028,31029,31030,31031,31032,31033,31034,31035,31036,31037,31038,31039,31040,31041,31042,31043,31044,31045,31046,31047,31048,31049,31050,31051,31052,31053,31054,31055,31057,31058,31059,31060,31061,31062,31063,31064,31065,31066,31067,31068,31069,31070,31071,31072,31073,31074,31075,31076,31077,31078,31079,31080,31081,31083,31084,31085,31086,31087,31088,31089,31090,31091,31092,31093,31097,31098,31099,31100,31101,31102,31103,31104,31105,31106,31107,31108,31109,31110,31111,31112,31113,31115,31116,31117,31118,31119,32000,32001,32002,32003,32004,32005,32006,32007,32008,32009,32010,32011,32012,32013,32014,32015,32016,32017,32019,32020,32021,32022,32023,32024,32025,32026,32027,32028,32029,32030,32031,32032,32033,32034,32035,32036,32037,32038,32039,32040,32041,32042,32043,32044,32045,32046,32047,32048,32049,32050,32051,32052,32053,32054,32055,32056,32057,32058,32059,32060,32061,32062,32063,32064,32065,32066,32067,32068,32069,32070,32071,32072,32073,32074,32075,32076,32077,32078,32079,32080,32081,32082,32083,32084,32085,32093,32094,32095,32096,32097,32098,32099,32100,32101,32102,32103,32104,32105,32106,32107,32108,32109,32110,32111,32112,33000,33001,33002,33003,33004,33005,33006,33007,33008,33009,33010,33011,33012,33013,33014,33015,33016,33017,33018,33019,33020,33021,33022,33023,33024,33025,33026,33027,33028,33029,33030,33031,33032,33033,33034,33035,33036,33037,33038,33039,33040,33041,33042,33043,33044,33045,33046,33047,33048,33049,33050,33051,33052,33053,33054,33055,33056,33057,33058,33059,33060,33061,33062,33063,33064,33065,33066,33067,33068,33069,33070,33071,33072,33073,33074,33075,33076,33077,33078,33079,33080,33081,33082,33083,33084,33085,33086,33087,33088,33089,33090,33091,33092,33093,33094,33095,33096,33097,33098,33099,33100,33101,33102,33103,33104,33105,33106,33107,33108,33109,33110,33111,33112,33113,33114,33115,33116,33117,33118,33119,33120,33121,33122,33123,33124,33125,33126,33127,33128,33129,33130,33131,33132,33133,33134,33135,33136,33137,33138,33139,33140,33141,33142,33143,33144,33145,33146,33147,33148,33149,33150,33151,33152,33153,33154,33155,33156,33157,33158,33159,33160,33161,33162,33163,33164,33165,33166,33167,33168,33169,33170,33171,33172,33173,33174,33175,33176,33177,33178,33179,33180,33181,33182,33183,33184,33185,33186,33187,33188,33189,33190,33191,33192,33193,33194,33195,33196,33197,33198,33199,33200,33201,33202,33203,33204,33205,33206,33207,33208,33209,33210,33211,33212,33213,33214,33215,33216,33217,33218,33219,33220,33221,33222,33223,33224,33225,33226,33227,33228,33229,33230,33231,33232,33233,33234,33235,33236,33237,33238,33239,33240,33241,33242,33243,33244,33245,33246,33247,33248,33249,33250,33251,33252,33253,33254,33255,33256,33257,33258,33259,33260,33261,33262,33263,33264,33265,33266,33267,33268,33269,33270,33271,33272,33273,33274,33275,33276,33277,33278,33279,33280,33281,33282,33283,33284,33285,33286,33287,33288,33289,33290,33291,33292,33293,33294,33295,33296,33297,33298,33299,33300,33301,33302,33303,33304,33305,33306,33307,33308,33309,33310,33311,33312,33313,33314,33315,33316,33317,33318,33319,33320,33321,33322,33323,33324,33325,33326,33327,33328,33329,33330,33331,33332,33333,33334,33335,33336,33337,33338,33339,33340,33341,33342,33343,33344,33345,33346,33347,33348,33349,33350,33351,33352,33353,33354,33355,33356,33357,33358,33359,33360,33361,33362,33363,33364,33365,33366,33367,33368,33369,33370,33371,33372,33373,33374,33375,33376,33377,33378,33379,33380,33381,33382,33383,33384,33385,33386,33387,33388,33389,33390,33391,33392,33393,33394,33395,33396,33397,33398,33399,33400,33401,33402,33403,33404,33405,33406,33407,33408,33409,33410,33411,33412,33413,33414,33415,33416,33417,33418,33419,33420,33421,33422,33423,33424,33425,33426,33427,33428,33429,33430,33431,33432,33433,33434,33435,33436,33437,33438,33439,33440,33441,33442,33443,33444,33445,33446,33447,33448,33449,33450,33451,33452,33453,33454,33455,33456,33457,33458,33459,33460,33461,33462,33463,33464,33465,33466,33467,33468,33469,33470,33471,33472,33473,33474,33475,33476,33477,33478,33479,33480,33481,33482,33483,33484,33485,33486,33487,33488,33489,33490,33491,33492,33493,33494,33495,33496,33497,33498,33499,33500,33501,33502,33503,33504,33505,33506,33507,33508,33509,33510,33511,33512,33513,33514,33515,33516,33517,33518,33519,33520,33521,33522,33523,33524,33525,33526,33527,33528,33529,33530,33531,33532,33533,33534,33535,33536,33537,33538,33539,33540,33541,33542,33543,33544,33545,33546,33547,33548,33549,33550,33551,33552,33553,33554,33555,33556,33557,33558,33559,33560,33561,33562,33563,33564,33565,33566,33567,33568,33569,33570,33571,33572,33573,33574,33575,33576,33577,33578,33579,33580,33581,33582,33583,33584,33585,33586,33587,33588,33589,33590,33591,33592,33593,33594,33595,33596,33597,33598,33599,33600,33601,33602,33603,33604,33605,33606,33607,33608,33609,33610,33611,33612,33613,33614,33615,33616,33617,33618,33619,33620,33621,33622,33623,33624,33625,33626,33627,33628,33629,33630,33631,33632,33633,33634,33635,33636,33637,33638,33639,33640,33641,33642,33643,33644,33645,33646,33647,33648,33649,33650,33651,33652,33653,33654,33655,33656,33657,33658,33659,33660,33661,33662,33663,33664,33665,33666,33667,33668,33669,33670,33671,33672,33673,33674,33675,33676,33677,33678,33679,33680,33681,33682,33683,33684,33685,33686,33687,33688,33689,33690,33691,33692,33693,33694,33695,33696,33697,33698,33699,33700,33701,33702,33703,33704,33705,33706,33707,33708,33709,33710,33711,33712,33713,33714,33715,33716,33717,33718,33719,33720,33721,33722,33723,33724,33725,33726,33727,33728,33729,33730,33731,33732,33733,33734,33735,33736,33737,33738,33739,33740,33741,33742,33743,33744,33745,33746,33747,33748,33749,33750,33751,33752,33753,33754,33755,33756,33757,33758,33759,33760,33761,33762,33763,33764,33765,33766,33767,33768,33769,33770,33771,33772,33773,33774,33775,33776,33777,33778,33779,33780,33781,33782,33783,33784,33785,33786,33787,33788,33789,33790,33791,33792,33793,33794,33795,33796,33797,33798,33799,33800,33801,33802,33803,33804,33805,33806,33807,33808,33809,33810,33811,33812,33813,33814,33815,33816,33817,33818,33819,33820,33821,33822,33823,33824,33825,33826,33827,33828,33829,33830,33831,33832,33833,33834,33835,33836,33837,33838,33839,33840,33841,33842,33843,33844,33845,33846,33847,33848,33849,33850,33851,33852,33853,33854,33855,33856,33857,33858,33859,33860,33861,33862,33863,33864,33865,33866,33867,33868,33869,33870,33871,33872,33873,33874,33875,33876,33877,33878,33879,33880,33881,33882,33883,33884,33885,33886,33887,33888,33889,33890,33891,33892,33893,33894,33895,33896,33897,33898,33899,33900,33901,33902,33903,33904,33905,33906,33907,33908,33909,33910,33911,33912,33913,33914,33915,33916,33917,33918,33919,33920,33921,33922,33923,33924,33925,33926,33927,33928,33929,33930,33931,33932,33933,33934,33935,33936,33937,33938,33939,33940,33941,33942,33943,33944,33945,33946,33947,33948,33949,33950,33951,33952,33953,33954,33955,33956,33957,33958,33959,33960,33961,33962,33963,33964,33965,33966,33967,33968,33969,33970,33971,33972,33973,33974,33975,33976,33977,33978,33979,33980,33981,33982,33983,33984,33985,33986,33987,33988,33989,33990,33991,33992,33993,33994,33995,33996,33997,33998,33999".split(","))
+
+/* ===== LEVEL 12 譜面を含む曲のみを対象にCSVを生成してダウンロード ===== */
+function exportLevel12Csv(){
+  if(!scores || scores.length===0){
+    alert("スコアデータが読み込まれていません。先にJSONファイルを読み込んでください。")
+    return
+  }
+
+  // mid+diff -> プレー済みスコアエントリ の索引
+  const scoreMap = new Map()
+  scores.forEach(s=>{
+    scoreMap.set(s.mid+"_"+s.diff, s)
+  })
+
+  // LEVEL12の譜面を1つでも持つ曲(mid)を、楽曲データベース全体から抽出
+  // ※ AC_VALID_IDSに無いmid(AC版で削除済み/未収録の曲)は除外する
+  const targetMids = Object.keys(musicDB).filter(mid=>
+    AC_VALID_IDS.has(mid) &&
+    DIFF_DEFS.some(([code])=> Number(getLevelFromTSV(mid,code))===12)
+  )
+
+  if(targetMids.length===0){
+    alert("LEVEL 12の譜面データが見つかりませんでした。")
+    return
+  }
+
+  // ▼ 公式CSVと同じヘッダー構成（1曲1行・難易度ごとに列を横持ち）
+  const header = [
+    "バージョン","タイトル","ジャンル","アーティスト","プレー回数",
+    ...DIFF_DEFS.flatMap(([,label])=>[
+      `${label} 難易度`, `${label} スコア`, `${label} PGreat`, `${label} Great`,
+      `${label} ミスカウント`, `${label} クリアタイプ`, `${label} DJ LEVEL`
+    ]),
+    "最終プレー日時"
+  ]
+
+  // ▼ 公式CSVの仕様：収録バージョン → 曲名（Unicodeコードポイント順）でソート
+  const rows = targetMids
+    .slice()
+    .sort((a,b)=>{
+      const va = versionOrder.indexOf(detectVersion(a))
+      const vb = versionOrder.indexOf(detectVersion(b))
+      if(va !== vb) return va - vb
+
+      const ta = toOfficialChars(musicDB[a].title)
+      const tb = toOfficialChars(musicDB[b].title)
+      if(ta < tb) return -1
+      if(ta > tb) return 1
+      return 0
+    })
+    .map(mid=>{
+      const row = [
+        detectVersion(mid),
+        toOfficialChars(musicDB[mid].title),
+        "", // ジャンル：本ツールの楽曲データベースには含まれないため空欄
+        "", // アーティスト：同上のため空欄
+        "0" // プレー回数：本ツールのデータには含まれないため0固定
+      ]
+
+      let lastPlay = ""
+
+      DIFF_DEFS.forEach(([code])=>{
+        const lvRaw = getLevelFromTSV(mid, code)
+        const lv = (lvRaw && lvRaw !== "-") ? lvRaw : "0"
+        const entry = scoreMap.get(mid+"_"+code)
+
+        if(!entry){
+          // 譜面が存在しない、または存在するが未プレー
+          row.push(lv, "0", "0", "0", "---", "NO PLAY", "---")
+        } else {
+          // ミスカウントが未計測(内部データで-1)の場合は公式仕様に合わせ"---"にする
+          const missField = (entry.miss < 0) ? "---" : entry.miss
+          row.push(
+            lv,
+            entry.score,
+            entry.pg,
+            entry.gr,
+            missField,
+            LAMP_OFFICIAL_MAP[entry.lamp] || entry.lamp,
+            entry.rank || "---"
+          )
+          const dt = officialDateTime(entry.updatedAt)
+          if(dt && dt > lastPlay) lastPlay = dt
+        }
+      })
+
+      row.push(lastPlay)
+      return row
+    })
+
+  // ▼ 公式CSVの仕様：改行はLF
+  const csvLines = [header, ...rows].map(row=>row.map(csvField).join(",")).join("\n")
+
+  // ▼ 公式CSVの仕様：UTF-8(BOM付き)
+  const bom = "\uFEFF"
+  const blob = new Blob([bom + csvLines], { type: "text/csv;charset=utf-8;" })
+  const url = URL.createObjectURL(blob)
+
+  const a = document.createElement("a")
+  a.href = url
+  a.download = `level12_scores_${formatDate(new Date().toISOString())}.csv`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+document.getElementById("exportLv12CsvBtn").onclick = exportLevel12Csv
+</script>
+
+</body>
+</html>
