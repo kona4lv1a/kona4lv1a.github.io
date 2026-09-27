@@ -323,7 +323,6 @@ details[open] summary .arrow::after {
 .top-json-loader input[type="file"] {
   display: block;
 }
-
 .summary-container {
   margin-bottom: 14px;
   border: 1px solid #333;
@@ -393,7 +392,6 @@ details[open] summary .arrow::after {
 <div class="top-json-loader">
   <input type="file" id="jsonFile" accept=".json">
 </div>
-
 <div class="layout">
 
 <details id="filterBox" open>
@@ -401,6 +399,7 @@ details[open] summary .arrow::after {
   <div class="filters">
 
     <div class="controls">
+
       <input id="search" placeholder="曲検索">
       <select id="versionFilter"></select>
 
@@ -2899,7 +2898,7 @@ const musicTSV=`
 31072	ないないルーティン	-	3	7	10	-
 31073	My Sweet Bird?	-	4	7	9	11
 31074	Too Late Snow	-	4	7	9	-
-31075	ACTØ	-	6	10	12	-
+31075	ACT0	-	6	10	12	-
 31076	GloriosA	-	6	9	11	-
 31077	流桜ノ門	-	5	8	10	-
 31078	20XX	-	6	9	11	-
@@ -3203,7 +3202,7 @@ const musicTSV=`
 33311	檄	-	6	9	11	-
 33312	Sakura Sunrise	-	6	9	11	-
 33313	Juicy	-	3	7	9	-
-33314	Lagrangian Point Ø	-	6	10	12	-
+33314	Lagrangian Point 0	-	6	10	12	-
 33315	Rush!!	-	4	7	10	-
 33002	ラブコメトキドキシリアス	-	7	10	12	-
 33053	ベンガル vs. アムール Battle	-	6	10	12	-
@@ -3238,7 +3237,7 @@ const musicTSV=`
 33121	Mighty Beat Monsterz	-	6	10	12	-
 33122	Smintheus	-	7	10	12	-
 33123	断罪のミメシス	-	7	10	12	-
-33124	Any%	-	6	10	12	-
+33124	Any％	-	6	10	12	-
 33125	キミとえがくキセキ	-	5	7	10	-
 33126	[E]	-	6	9	11	-
 33127	三日天下モンキー	-	4	8	11	-
@@ -3834,8 +3833,12 @@ document.getElementById("summaryToggle").onclick = () => {
 const OFFICIAL_CHAR_MAP = {
   "\u00A1": "!",   // ¡ (¡Viva!)                    → !
   "\u00C6": "A",   // Æ (ÆTHER)                     → A
+  "\u00E6": "ae",  // æ (Ignis†Iræ)                 → ae
   "\u00F6": "o",   // ö (Atröpøs)                   → o
   "\u00F8": "o",   // ø (Atröpøs)                   → o
+  "\u00D8": "O",   // Ø (Space Battleship S4TØ 等)   → O														   
+  "\u0259": "e",   // ə (uən)                       → e
+  "\u0418": "N",   // И (FiZZλ_PØT!0И)               → N
   "\u00DC": "U",   // Ü (Übertreffen)               → U
   "\u00E4": "a",   // ä (Präludium)                 → a
   "\u00E9": "e",   // é (L'amour et la liberté 等)   → e
@@ -3843,16 +3846,37 @@ const OFFICIAL_CHAR_MAP = {
   "\u2665": "",    // ♥ (Double ♥♥ Loving 等)        → 削除
   "\u2668": " ",   // ♨ (ギョギョっと人魚♨爆婚ブライダル) → 半角スペース
   "\u7131": "火",   // 焱 (焱影)                      → 火
+  // † (ダガー記号) と λ (ギリシャ文字ラムダ) はCP932上で表現できるため無変換のまま
 }
 
 function toOfficialChars(str){
   if(str==null) return ""
   let s = String(str)
+  // 1. 分解可能なアクセント記号(マクロン、アキュート、ウムラウト等)は基底文字に戻す
+  //    例: ā→a, ī→i, í→i, ö→o, ä→a, é→e, ê→e, Ü→U など
+  //    ※ 日本語の濁点・半濁点(が、ピ等)もNFDで一旦分解されるため、
+  //      最後にNFCで再結合して元の1文字に戻す（これを忘れると「が」等が壊れる）
+  s = s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").normalize("NFC")
+  // 2. NFDで分解できない特殊文字・記号は個別に変換
   for(const [from,to] of Object.entries(OFFICIAL_CHAR_MAP)){
     s = s.split(from).join(to)
   }
   return s
 }
+
+/* ===== AC版に未収録であることが判明している曲(music_data.binの索引だけでは
+   判別できなかったもの)をタイトルで明示的に除外するリスト ===== */
+const MANUALLY_EXCLUDED_TITLES = new Set([
+  "In Your EyEs",
+  "Welcome to the Mosh Pit",
+  "Lagrangian Point 0",
+  "ポチ子の幸せな日常",
+  "多極性ニューロンの崩壊による人間の末路",
+  "天泣",
+  "終末を追う者",
+  "見習い天使と星降りの丘",
+  "鬼華-修羅の舞-",
+])
 
 /* ===== CSVフィールドのエスケープ ===== */
 function csvField(v){
@@ -3915,9 +3939,11 @@ function exportLevel12Csv(){
   })
 
   // LEVEL12の譜面を1つでも持つ曲(mid)を、楽曲データベース全体から抽出
-  // ※ AC_VALID_IDSに無いmid(AC版で削除済み/未収録の曲)は除外する
+  // ※ AC_VALID_IDSに無いmid、および MANUALLY_EXCLUDED_TITLES に含まれる曲
+  //   (AC版で削除済み/未収録の曲)は除外する
   const targetMids = Object.keys(musicDB).filter(mid=>
     AC_VALID_IDS.has(mid) &&
+    !MANUALLY_EXCLUDED_TITLES.has(musicDB[mid].title) &&
     DIFF_DEFS.some(([code])=> Number(getLevelFromTSV(mid,code))===12)
   )
 
