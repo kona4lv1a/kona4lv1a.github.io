@@ -316,6 +316,14 @@ details[open] summary .arrow::after {
 
 /* ===== サマリー（ANALYTICS） ===== */
 
+.top-json-loader {
+  margin-bottom: 10px;
+}
+
+.top-json-loader input[type="file"] {
+  display: block;
+}
+
 .summary-container {
   margin-bottom: 14px;
   border: 1px solid #333;
@@ -334,6 +342,7 @@ details[open] summary .arrow::after {
 
 .summary-body {
   padding: 10px;
+  display: none;
 }
 
 .summary-table {
@@ -381,6 +390,10 @@ details[open] summary .arrow::after {
 
 <h2>Score Viewer</h2>
 
+<div class="top-json-loader">
+  <input type="file" id="jsonFile" accept=".json">
+</div>
+
 <div class="layout">
 
 <details id="filterBox" open>
@@ -388,7 +401,6 @@ details[open] summary .arrow::after {
   <div class="filters">
 
     <div class="controls">
-      <input type="file" id="jsonFile" accept=".json">
       <input id="search" placeholder="曲検索">
       <select id="versionFilter"></select>
 
@@ -449,7 +461,7 @@ details[open] summary .arrow::after {
 
 <div class="summary-container">
   <div class="summary-header" id="summaryToggle">
-    ANALYTICS
+    ANALYTICS <span class="summary-toggle-text">（クリックで展開）</span>
   </div>
 
   <div class="summary-body" id="summaryBody">
