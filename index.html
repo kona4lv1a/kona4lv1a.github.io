@@ -3884,7 +3884,10 @@ if(currentLevel !== "ALL"){
 
 
     const titleText = (musicDB[mid]?.title) || mid
-    let html = `<div class="title">[${verIdx}] ${titleText} ${titleLabel}</div>`
+    const playCountLabel = song.playCount === null || song.playCount === undefined
+      ? "PLAY：—"
+      : `PLAY：${song.playCount.toLocaleString("ja-JP")}回`
+    let html = `<div class="title">[${verIdx}] ${titleText} ${titleLabel}<span class="play-count">${playCountLabel}</span></div>`
 
     html += `
       <table>
@@ -3897,11 +3900,10 @@ if(currentLevel !== "ALL"){
           <th>GREAT</th>
           <th>MISS</th>
           <th>OPTION</th>
-          <th>PLAY</th>
         </tr>
     `
 
-    diffs.forEach(d=>{
+    diffs.forEach((d, diffIndex)=>{
       let lampClass = d.lamp==="FULL COMBO" ? "FULLCOMBO" : d.lamp
 
       const isMobile = window.innerWidth < 600
@@ -3926,7 +3928,6 @@ if(currentLevel !== "ALL"){
           <td>${d.gr}</td>
           <td>${d.miss}</td>
           <td class="used-options">${usedHtml}</td>
-          <td class="play-count-cell">${song.playCount === null || song.playCount === undefined ? "—" : song.playCount.toLocaleString("ja-JP")}</td>
         </tr>
       `
     })
