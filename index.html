@@ -42,6 +42,19 @@ input,select{
   margin-bottom:6px;
 }
 
+.play-count {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 6px;
+  border: 1px solid #3d5b47;
+  border-radius: 4px;
+  background: #17231b;
+  color: #9fdaa9;
+  font-size: 12px;
+  font-weight: normal;
+  vertical-align: middle;
+}
+
 table{
   width:100%;
   border-collapse:collapse;
@@ -261,7 +274,7 @@ td:nth-child(4){
 }
 
 .layout {
-  height: 100vh;
+  min-height: 100vh;
   display: flex;
   flex-direction: column;
 }
@@ -271,9 +284,9 @@ td:nth-child(4){
 }
 
 .table-area {
-  flex: 1 1 auto;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+  flex: 0 0 auto;
+  overflow: visible;
+  min-height: 0;
 }
 
 summary {
@@ -402,6 +415,11 @@ details[open] summary .arrow::after {
 
       <input id="search" placeholder="曲検索">
       <select id="versionFilter"></select>
+      <select id="sortFilter" aria-label="並べ替え">
+        <option value="default">並べ替え：標準</option>
+        <option value="play_desc">選曲回数：多い順</option>
+        <option value="play_asc">選曲回数：少ない順</option>
+      </select>
 
       <select id="dateFilter">
         <option value="ALL">ALL DAYS</option>
@@ -464,6 +482,13 @@ details[open] summary .arrow::after {
   </div>
 
   <div class="summary-body" id="summaryBody">
+
+    <!-- ▼ TOTAL SONG PLAY COUNT -->
+    <div class="summary-title">TOTAL SONG PLAY COUNT</div>
+    <table class="summary-table">
+      <tr><th>PLAY</th></tr>
+      <tr><td id="sum-total-play-count">—</td></tr>
+    </table>
 
     <!-- ▼ TOTAL CLEAR LAMPS -->
     <div class="summary-title">TOTAL CLEAR LAMPS</div>
@@ -3448,6 +3473,28 @@ versionOrder.forEach(v=>{
   verSel.appendChild(o)
 })
 
+/* ===== 選曲回数の読み取り ===== */
+function toOptionalCount(value){
+  if(value === null || value === undefined || value === "") return null
+  const n = Number(value)
+  return Number.isFinite(n) && n >= 0 ? n : null
+}
+
+function getPlayCountFromRecord(record){
+  const total = toOptionalCount(record.play_count ?? record.playCount ?? record.playcount)
+  if(total !== null) return total
+
+  const sp = toOptionalCount(record.play_count_sp ?? record.playCountSp)
+  const dp = toOptionalCount(record.play_count_dp ?? record.playCountDp)
+  if(sp !== null || dp !== null) return (sp || 0) + (dp || 0)
+
+  // 互換性のため、mybest_count形式の単独レコードにも対応
+  const count = toOptionalCount(record.count)
+  if(record.collection === "mybest_count" && count !== null) return count
+
+  return null
+}
+
 /* ===== SCORE ===== */
 let scores=[]
 let allDates=[]   // 全日付を保持
@@ -3485,6 +3532,10 @@ document.getElementById("jsonFile").addEventListener("change",e=>{
           gr:s.gArray[i]||0,
           miss:s.mArray[i]||0,
           opt3:s.optArray[i] || 0,   // ★ USED OPTION 用
+          // 新しいエクスポート形式の選曲回数に対応。旧形式では null。
+          playCount: getPlayCountFromRecord(s),
+          playCountSp: toOptionalCount(s.play_count_sp),
+          playCountDp: toOptionalCount(s.play_count_dp),
           updatedAt:s.updatedAt || ""
         })
       }
@@ -3608,6 +3659,18 @@ function updateStats(list){
   const clearRate=total?Math.round((clearCount/total)*100):0
 
   /* ====== ▼ HTML へ反映 ====== */
+
+  // TOTAL SONG PLAY COUNT：同じ曲の譜面ごとの重複を避け、曲単位で集計
+  const playCountBySong = new Map()
+  scores.forEach(s => {
+    if (s.playCount === null || s.playCount === undefined) return
+    const prev = playCountBySong.get(s.mid)
+    if (prev === undefined || s.playCount > prev) playCountBySong.set(s.mid, s.playCount)
+  })
+  const totalSongPlayCount = [...playCountBySong.values()].reduce((sum, count) => sum + count, 0)
+  document.getElementById("sum-total-play-count").textContent = playCountBySong.size
+    ? totalSongPlayCount.toLocaleString("ja-JP")
+    : "データなし"
 
   // TOTAL CLEAR LAMPS
   document.getElementById("sum-total-fc").textContent = totalLamp["FULL COMBO"]
@@ -3766,8 +3829,21 @@ function render(){
       return db > da ? b : a
     }).updatedAt
 
-    return { mid, diffs, latest }
+    const counts = diffs.map(d => d.playCount).filter(v => v !== null && v !== undefined)
+    const playCount = counts.length ? Math.max(...counts) : null
+    return { mid, diffs, latest, playCount }
   })
+
+  const sortMode = document.getElementById("sortFilter")?.value || "default"
+  if(sortMode === "play_desc"){
+    songs.sort((a,b) => (b.playCount ?? -1) - (a.playCount ?? -1) || a.mid.localeCompare(b.mid, "ja", {numeric:true}))
+  }else if(sortMode === "play_asc"){
+    songs.sort((a,b) => {
+      const ac = a.playCount ?? Number.POSITIVE_INFINITY
+      const bc = b.playCount ?? Number.POSITIVE_INFINITY
+      return ac - bc || a.mid.localeCompare(b.mid, "ja", {numeric:true})
+    })
+  }
 
   const root=document.getElementById("list")
   root.innerHTML=""
@@ -3820,7 +3896,8 @@ if(currentLevel !== "ALL"){
           <th>PGREAT</th>
           <th>GREAT</th>
           <th>MISS</th>
-          <th>USED OPTION</th>
+          <th>OPTION</th>
+          <th>PLAY</th>
         </tr>
     `
 
@@ -3849,6 +3926,7 @@ if(currentLevel !== "ALL"){
           <td>${d.gr}</td>
           <td>${d.miss}</td>
           <td class="used-options">${usedHtml}</td>
+          <td class="play-count-cell">${song.playCount === null || song.playCount === undefined ? "—" : song.playCount.toLocaleString("ja-JP")}</td>
         </tr>
       `
     })
@@ -3881,6 +3959,7 @@ if(currentLevel !== "ALL"){
 
 document.getElementById("search").oninput=render
 verSel.onchange=render
+document.getElementById("sortFilter").onchange=render
 
 document.getElementById("summaryToggle").onclick = () => {
   const body = document.getElementById("summaryBody")
@@ -4052,7 +4131,10 @@ function exportLevel12Csv(){
         toOfficialChars(musicDB[mid].title),
         "", // ジャンル：本ツールの楽曲データベースには含まれないため空欄
         "", // アーティスト：同上のため空欄
-        "0" // プレー回数：本ツールのデータには含まれないため0固定
+        (() => {
+          const countEntry = scores.find(s => String(s.mid) === String(mid) && s.playCount !== null && s.playCount !== undefined)
+          return countEntry ? String(countEntry.playCount) : "0"
+        })() // プレー回数：新形式のJSONに値があれば出力、旧形式では0
       ]
 
       let lastPlay = ""
