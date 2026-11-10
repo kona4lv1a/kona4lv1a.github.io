@@ -32,7 +32,7 @@ button,select,input{transition:border-color .16s,box-shadow .16s,background .16s
 .hero-kicker:before{content:"";height:6px;width:6px;border-radius:50%;background:var(--accent);box-shadow:0 0 0 3px #f0657533}
 .hero-title{display:flex;align-items:baseline;gap:15px;flex-wrap:wrap;margin:8px 0 7px}.hero-title h1{margin:0;font-size:clamp(26px,3.5vw,38px);letter-spacing:-.03em;font-weight:860}.hero-title .tag{background:#f065752a;color:#ff9eae;border:1px solid #f0657566;font-size:11px;font-weight:800;border-radius:5px;padding:4px 9px}
 .hero-description{color:#b7c5d6;margin:0 0 22px;font-size:13px}
-.hero-overview{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));border:1px solid #ffffff24;border-radius:11px;overflow:hidden;background:#ffffff0a}
+.hero-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));border:1px solid #ffffff24;border-radius:11px;overflow:hidden;background:#ffffff0a}
 .hero-metric{padding:16px 20px;border-right:1px solid #ffffff22;min-width:0}.hero-metric:last-child{border-right:0}.hero-metric-label{display:block;font-size:10px;color:#b3c3d7;letter-spacing:.11em;font-weight:800}.hero-metric-number{font-size:clamp(21px,3vw,33px);font-weight:880;letter-spacing:-.04em;line-height:1.3;font-variant-numeric:tabular-nums}.hero-metric-number small{font-size:14px;color:#c5cfdd;margin-left:3px;font-weight:650}
 .progress-area{margin-top:18px}.progress-head{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap;font-size:11px;color:#b7c6d9;font-weight:700;margin-bottom:8px}
 .progress-track{height:9px;display:flex;border-radius:99px;background:#546079;overflow:hidden}.progress-fill{height:100%;transition:width .2s}.progress-legend{display:flex;gap:15px;flex-wrap:wrap;margin-top:10px;font-size:11px;color:#b9c6d9}
@@ -85,7 +85,7 @@ button,select,input{transition:border-color .16s,box-shadow .16s,background .16s
 .detail-note{font-size:11px;color:#7e8ba0}.detail-delete{border:1px solid #dbe3ee;background:white;color:#5a6c86;padding:7px 12px;border-radius:7px;font-size:11px;font-weight:750}
 @media(max-width:1230px){.tier-card-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.sheet-grid.compact-mode .tier-card-grid{grid-template-columns:repeat(5,minmax(0,1fr))}}
 @media(max-width:960px){.topbar-inner{padding:12px 20px}.wrapper{padding:22px 20px 50px}.toolbar-main{grid-template-columns:repeat(2,minmax(0,1fr))}.tier-card-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.sheet-grid.compact-mode .tier-card-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
-@media(max-width:690px){.topbar-inner{padding:13px 14px;align-items:flex-start;flex-direction:column;gap:10px}.topbar-right{width:100%;justify-content:flex-start}.topbar-caption{display:none}.wrapper{padding:16px 11px 36px}.hero{border-radius:11px;padding:22px 18px 20px}.hero-title h1{font-size:27px}.hero-overview{grid-template-columns:repeat(2,minmax(0,1fr))}.hero-metric{padding:11px 13px;border-bottom:1px solid #ffffff22}.hero-metric:nth-child(2){border-right:0}.hero-metric:nth-child(n+3){border-bottom:0}.hero-metric-number{font-size:24px}.progress-legend{gap:6px 11px}.toolbar{padding:15px 13px}.toolbar-main{grid-template-columns:1fr;gap:8px}.toolbar-bottom{align-items:flex-start}.tier-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:10px}.sheet-grid.compact-mode .tier-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-card{min-height:84px;padding:9px 8px 9px 10px}.chart-title{font-size:11px}.tier-heading{padding:10px 12px}.tier-name{font-size:14px}.sheet-grid.list-mode .tier-card-grid{grid-template-columns:1fr}.lamp-choices{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-content{padding:17px}.detail-top{padding:20px 17px}}
+@media(max-width:690px){.topbar-inner{padding:13px 14px;align-items:flex-start;flex-direction:column;gap:10px}.topbar-right{width:100%;justify-content:flex-start}.topbar-caption{display:none}.wrapper{padding:16px 11px 36px}.hero{border-radius:11px;padding:22px 18px 20px}.hero-title h1{font-size:27px}.hero-overview{grid-template-columns:1fr}.hero-metric{padding:11px 13px;border-right:0;border-bottom:1px solid #ffffff22}.hero-metric:nth-child(2){border-right:0}.hero-metric:nth-child(n+3){border-bottom:1px solid #ffffff22}.hero-metric:last-child{border-bottom:0}.hero-metric-number{font-size:24px}.progress-legend{gap:6px 11px}.toolbar{padding:15px 13px}.toolbar-main{grid-template-columns:1fr;gap:8px}.toolbar-bottom{align-items:flex-start}.tier-card-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;padding:10px}.sheet-grid.compact-mode .tier-card-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.chart-card{min-height:84px;padding:9px 8px 9px 10px}.chart-title{font-size:11px}.tier-heading{padding:10px 12px}.tier-name{font-size:14px}.sheet-grid.list-mode .tier-card-grid{grid-template-columns:1fr}.lamp-choices{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.detail-content{padding:17px}.detail-top{padding:20px 17px}}
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
 /* Keep the difficulty table in view without excessive dashboard whitespace. */
 .wrapper{padding-top:18px}
@@ -110,7 +110,7 @@ button,select,input{transition:border-color .16s,box-shadow .16s,background .16s
 <header class="topbar">
  <div class="topbar-inner">
   <a class="brand" href="#top" aria-label="先頭に戻る"><span class="brand-mark">12</span><span class="brand-text"><strong>SP☆12 難易度表</strong><small>HARD CLEAR SHEET</small></span></a>
-  <div class="topbar-right"><span class="topbar-caption">LOCAL SCORE TRACKER</span>
+  <div class="topbar-right">
     <button type="button" class="nav-btn nav-btn-primary" id="importBtn">＋ CSV 読み込み</button>
   </div>
  </div>
@@ -119,12 +119,11 @@ button,select,input{transition:border-color .16s,box-shadow .16s,background .16s
 <main class="wrapper" id="top">
  <section class="hero" aria-label="HARD難易度表とランプ集計">
   <div class="hero-kicker">beatmania IIDX / SINGLE PLAY / LV.12</div>
-  <div class="hero-title"><h1>HARD CLEAR <span style="color:#ff8799">TIER LIST</span></h1><span class="tag">2026 CUSTOM SHEET</span></div>
+  <div class="hero-title"><h1>HARD CLEAR <span style="color:#ff8799">TIER LIST</span></h1></div>
   <p class="hero-description">地力・個人差を一覧で確認。ランプを記録して、☆12の進捗をひと目で。</p>
   <div class="hero-overview">
-    <div class="hero-metric"><span class="hero-metric-label">TOTAL CHARTS</span><div class="hero-metric-number" id="statTotal">—</div></div>
-    <div class="hero-metric"><span class="hero-metric-label">HARD OR BETTER</span><div class="hero-metric-number" id="statHard">—<small> / —%</small></div></div>
-    <div class="hero-metric"><span class="hero-metric-label">EX-HARD OR BETTER</span><div class="hero-metric-number" id="statExhard">—</div></div>
+    <div class="hero-metric"><span class="hero-metric-label">NOT HARD</span><div class="hero-metric-number" id="statNotHard">—</div></div>
+    <div class="hero-metric"><span class="hero-metric-label">EX-HARD</span><div class="hero-metric-number" id="statExhard">—</div></div>
     <div class="hero-metric"><span class="hero-metric-label">FULL COMBO</span><div class="hero-metric-number" id="statFc">—</div></div>
   </div>
   <div class="progress-area"><div class="progress-head"><span>YOUR CLEAR LAMPS</span><span id="statProgress">CSVを読み込むか、譜面を選択して記録できます</span></div><div id="progressTrack" class="progress-track"></div><div id="progressLegend" class="progress-legend"></div></div>
@@ -2890,8 +2889,8 @@ function persist(){try{localStorage.setItem(storageKey,JSON.stringify({scores:[.
 function restore(){try{const raw=localStorage.getItem(storageKey);if(raw){const saved=JSON.parse(raw);(saved.scores||[]).forEach(s=>{const item=normalizeFlat(s);if(item)scoreMap.set(scoreKey(item.mid,item.diff),item);});overrides=saved.overrides||{};loadedName=saved.playerName||'';lastFileName=saved.lastFileName||'';}}catch(e){console.warn('Stored score parse failed',e);}}
 function showStatus(message){qs('#statusText').textContent=message;}
 function fmtNum(n){return Number(n||0).toLocaleString('ja-JP');}
-function totalStats(){const all=allCharts(),count={};LAMP_KEYS.forEach(k=>count[k]=0);all.forEach(c=>count[c.lamp]++);const hard=count.HARD+count.EXHARD+count['FULL COMBO'];return {all,count,hard};}
-function renderStats(){const {all,count,hard}=totalStats(),total=all.length,hardRate=total?hard/total*100:0;qs('#statTotal').textContent=fmtNum(total);qs('#statHard').innerHTML=fmtNum(hard)+'<small> / '+hardRate.toFixed(1)+'%</small>';qs('#statExhard').textContent=fmtNum(count.EXHARD+count['FULL COMBO']);qs('#statFc').textContent=fmtNum(count['FULL COMBO']);const played=total-count['NO PLAY'];qs('#statProgress').textContent=`記録済み ${fmtNum(played)} / ${fmtNum(total)} 譜面`;
+function totalStats(){const all=allCharts(),count={};LAMP_KEYS.forEach(k=>count[k]=0);all.forEach(c=>count[c.lamp]++);return {all,count};}
+function renderStats(){const {all,count}=totalStats(),total=all.length;const notHard=count['NO PLAY']+count.FAILED+count.ASSISTED+count.EASY+count.CLEAR;qs('#statNotHard').textContent=fmtNum(notHard);qs('#statExhard').textContent=fmtNum(count.EXHARD);qs('#statFc').textContent=fmtNum(count['FULL COMBO']);const played=total-count['NO PLAY'];qs('#statProgress').textContent=`記録済み ${fmtNum(played)} / ${fmtNum(total)} 譜面`;
  qs('#progressTrack').innerHTML=LAMP_KEYS.filter(k=>k!=='NO PLAY').map(k=>`<div class="progress-fill" style="width:${100*count[k]/total}%;background:${LAMP_META[k].color}" title="${esc(LAMP_META[k].name)}：${count[k]}"></div>`).join('');
  qs('#progressLegend').innerHTML=['NO PLAY','FAILED','ASSISTED','EASY','CLEAR','HARD','EXHARD','FULL COMBO'].map(k=>`<span class="legend-item"><i class="legend-dot" style="background:${LAMP_META[k].color}"></i>${esc(LAMP_META[k].short)} ${fmtNum(count[k])}</span>`).join('');
 }
