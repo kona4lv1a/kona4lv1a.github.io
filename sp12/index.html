@@ -63,12 +63,12 @@ button,select,input{transition:border-color .16s,box-shadow .16s,background .16s
 .tier-card-grid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:9px;padding:13px}
 .chart-card{display:flex;flex-direction:column;gap:5px;justify-content:space-between;position:relative;min-width:0;min-height:84px;text-align:left;padding:10px 12px 9px 12px;border:1px solid #cfd8e4;border-radius:7px;background:var(--lamp-bg);color:var(--ink);box-shadow:0 1px 2px #20304407}
 .chart-card:hover{border-color:#9cb2cf;transform:translateY(-1px);box-shadow:0 5px 13px #23334b1b}
-.chart-card.fc-rainbow{background:linear-gradient(135deg,#ffe9f7 0%,#fff0cf 18%,#eef8c8 36%,#ddf7ee 54%,#e7efff 72%,#efe3ff 88%,#ffe6f5 100%);border-color:#dcb4e5}
+.chart-card.fc-rainbow{background:linear-gradient(135deg,#ffd7eb 0%,#ffe0b2 18%,#e5f2b5 36%,#c9eee1 54%,#d3e1ff 72%,#e7d1ff 88%,#fcd2eb 100%);border-color:#d9a5df}
 .chart-card.fc-rainbow:hover{border-color:#c995d7}
 .chart-top{display:flex;align-items:center;justify-content:space-between;gap:5px;min-width:0}.chart-diff{font-size:10px;font-weight:900;letter-spacing:.03em}.chart-diff.a{color:#c64b5c}.chart-diff.h{color:#bb8c1e}.chart-diff.l{color:#8849be}
 .chart-version{font-size:10px;color:#99a6b6;font-weight:700}.chart-title{font-size:12px;line-height:1.4;min-width:0;font-weight:800;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden}
 .chart-bottom{display:flex;justify-content:space-between;align-items:center;gap:7px;margin-top:3px}.chart-lamp{font-size:10px;letter-spacing:.01em;font-weight:820;color:var(--lamp-text)}.chart-rank{color:#8b96a9;font-size:10px;font-weight:790}
-.chart-card.no-play .chart-title{color:#5b667a}.chart-card.no-play{background:#f2f5f9}
+.chart-card.no-play .chart-title{color:#5b667a}.chart-card.no-play{background:#fbfcfe}
 .tier-empty{padding:22px;text-align:center;font-size:12px;color:#8996a6}
 .sheet-grid.list-mode .tier-card-grid{grid-template-columns:repeat(5,minmax(0,1fr));gap:0;padding:7px 14px 13px}
 .sheet-grid.list-mode .chart-card{border-radius:0;border:0;border-bottom:1px solid #dbe2ec;min-height:41px;padding:8px 10px;display:flex;justify-content:center}
@@ -2858,14 +2858,14 @@ const sheetAnotherIds=new Set(TIERS.flatMap(group=>group.charts.filter(chart=>ch
 const sheetAnotherHyperIds=new Set(TIERS.flatMap(group=>group.charts.filter(chart=>chart.diff==='SPH'&&sheetAnotherIds.has(String(chart.mid))).map(chart=>String(chart.mid))));
 function listDisplayName(chart){if(chart.diff==='SPL')return chart.title+'†';if(sheetAnotherHyperIds.has(String(chart.mid))){if(chart.diff==='SPA')return chart.title+'[A]';if(chart.diff==='SPH')return chart.title+'[H]';}return chart.title;}
 const LAMP_META={
- 'NO PLAY':{short:'NO PLAY',name:'NO PLAY',color:'#c8d0dc',bg:'#eef2f7',text:'#7f8b9b',order:0},
- 'FAILED':{short:'FAILED',name:'FAILED',color:'#7b8695',bg:'#e4e9ef',text:'#5b6779',order:1},
- 'ASSISTED':{short:'ASSIST',name:'ASSIST CLEAR',color:'#a26bdd',bg:'#f0e7ff',text:'#7a4fb0',order:2},
- 'EASY':{short:'EASY',name:'EASY CLEAR',color:'#58ac61',bg:'#e4f4e7',text:'#2f7f3d',order:3},
- 'CLEAR':{short:'CLEAR',name:'CLEAR',color:'#54a3df',bg:'#e4f0fb',text:'#326f9b',order:4},
- 'HARD':{short:'HARD',name:'HARD CLEAR',color:'#e56570',bg:'#fde7e7',text:'#c34758',order:5},
- 'EXHARD':{short:'EX-HARD',name:'EX HARD CLEAR',color:'#e7af47',bg:'#fff0cc',text:'#9d6f1d',order:6},
- 'FULL COMBO':{short:'FULL COMBO',name:'FULL COMBO',color:'#d16ad3',bg:'#ffe8ff',text:'#953b99',order:7}
+ 'NO PLAY':{short:'NO PLAY',name:'NO PLAY',color:'#c8d0dc',bg:'#fbfcfe',text:'#7f8b9b',order:0},
+ 'FAILED':{short:'FAILED',name:'FAILED',color:'#7b8695',bg:'#dce2e9',text:'#5b6779',order:1},
+ 'ASSISTED':{short:'ASSIST',name:'ASSIST CLEAR',color:'#a26bdd',bg:'#e9dbfa',text:'#7a4fb0',order:2},
+ 'EASY':{short:'EASY',name:'EASY CLEAR',color:'#58ac61',bg:'#d8eddd',text:'#2f7f3d',order:3},
+ 'CLEAR':{short:'CLEAR',name:'CLEAR',color:'#54a3df',bg:'#d7e9f9',text:'#326f9b',order:4},
+ 'HARD':{short:'HARD',name:'HARD CLEAR',color:'#e56570',bg:'#fbd9de',text:'#c34758',order:5},
+ 'EXHARD':{short:'EX-HARD',name:'EX HARD CLEAR',color:'#e7af47',bg:'#ffe5b5',text:'#9d6f1d',order:6},
+ 'FULL COMBO':{short:'FULL COMBO',name:'FULL COMBO',color:'#d16ad3',bg:'#f7d8fa',text:'#953b99',order:7}
 };
 const LAMP_KEYS=Object.keys(LAMP_META);
 const storageKey='sp12-hc-tracker-v1';
